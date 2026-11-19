@@ -24,7 +24,18 @@ import {
 import { commandForKey, listenForTouch, type Command } from "./input";
 import { sankofaLogo } from "./logo";
 import { draw, layoutFor, type Layout } from "./render";
-import { currentStreak, loadProgress, recordDaily, recordFree, recordRun, saveProgress, type Progress } from "./storage";
+import { Sound } from "./sound";
+import {
+  currentStreak,
+  loadProgress,
+  recordDaily,
+  recordFree,
+  recordRun,
+  saveProgress,
+  settingsOf,
+  type Progress,
+  type Settings,
+} from "./storage";
 
 type Screen = "title" | "levels" | "daily" | "help" | "game";
 
@@ -100,9 +111,12 @@ export class SankofaSnake {
   private carry = 0;
   private lastClear: Extract<GameEvent, { type: "cleared" }> | null = null;
   private reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  private sound: Sound;
 
   constructor(root: HTMLElement, private options: Options = {}) {
     this.root = root;
+    const settings = settingsOf(this.progress);
+    this.sound = new Sound(settings.sound, settings.vibration);
     root.classList.add("ss-root");
     root.innerHTML = `
       <div class="ss-screen ss-title" data-screen="title"></div>
@@ -175,8 +189,19 @@ export class SankofaSnake {
         <li>The daily challenge mixes a world and its rules from the date, so everyone who plays that day gets the same one. Clear it on days in a row to build a streak.</li>
         <li>Free play is the classic game in any world you have opened, with wrap-around edges or walls. It goes on until the snake crashes.</li>
         <li>Practice opens every level at a slower speed. Running into something only stops the snake, so it suits a class demo.</li>
+        <li>Press M to turn the sound off or on.</li>
       </ul>
+      <h3 class="ss-subheading">Settings</h3>
+      <div class="ss-tabs" role="group" aria-label="Settings">
+        <button class="ss-tab" data-setting="sound">Sound</button>
+        ${Sound.canVibrate ? `<button class="ss-tab" data-setting="vibration">Vibration</button>` : ""}
+      </div>
+      <p class="ss-note ss-intro">Gold means on. ${Sound.canVibrate ? "Vibration works on most Android phones." : ""}</p>
       <div class="ss-actions"><button class="ss-btn ss-primary" data-go="title" data-focus>Back</button></div>`;
+    el.querySelectorAll<HTMLButtonElement>("[data-setting]").forEach((b) => {
+      b.addEventListener("click", () => this.toggleSetting(b.dataset.setting as keyof Settings));
+    });
+    this.syncSettings();
     this.wireNav(el);
   }
 
@@ -288,14 +313,20 @@ export class SankofaSnake {
       </div>
       <div class="ss-actions ss-bar">
         <button class="ss-btn" data-pause>Pause</button>
+        <button class="ss-btn ss-toggle" data-setting="sound">Sound</button>
         <button class="ss-btn" data-back>Levels</button>
       </div>
-      <p class="ss-note ss-hint">Arrow keys or W, A, S and D to steer. Space to pause. On a phone, swipe to steer and tap the board to pause.</p>`;
+      <p class="ss-note ss-hint">Arrow keys or W, A, S and D to steer. Space to pause and M for sound. On a phone, swipe to steer and tap the board to pause.</p>`;
     this.canvas = el.querySelector("canvas")!;
     this.ctx = this.canvas.getContext("2d")!;
     el.querySelector("[data-pause]")!.addEventListener("click", () => this.command({ type: "pause" }));
-    listenForTouch(el.querySelector("[data-stage]")!, (c) => this.command(c));
+    const stage = el.querySelector<HTMLElement>("[data-stage]")!;
+    listenForTouch(stage, (c) => this.command(c));
+    // A swipe steers during touchmove, which iPhones don't count as a press for sound. The end of the touch does count.
+    stage.addEventListener("touchend", () => this.sound.unlock(), { passive: true });
     el.querySelector("[data-back]")!.addEventListener("click", () => this.back());
+    el.querySelector("[data-setting]")!.addEventListener("click", () => this.toggleSetting("sound"));
+    this.syncSettings();
     this.wireNav(el);
   }
 
@@ -307,6 +338,26 @@ export class SankofaSnake {
     el.querySelectorAll<HTMLElement>("[data-go]").forEach((b) =>
       b.addEventListener("click", () => this.show(b.dataset.go as Screen)),
     );
+  }
+
+  /** Turns sound or vibration off or on, saves the choice and updates every switch. */
+  private toggleSetting(name: keyof Settings) {
+    const settings = settingsOf(this.progress);
+    settings[name] = !settings[name];
+    this.progress = { ...this.progress, settings };
+    saveProgress(this.progress);
+    this.sound.soundOn = settings.sound;
+    this.sound.vibrationOn = settings.vibration;
+    this.sound.unlock();
+    this.syncSettings();
+    this.say(`${name === "sound" ? "Sound" : "Vibration"} ${settings[name] ? "on" : "off"}.`);
+  }
+
+  private syncSettings() {
+    const settings = settingsOf(this.progress);
+    this.root.querySelectorAll<HTMLButtonElement>("[data-setting]").forEach((b) => {
+      b.setAttribute("aria-pressed", String(settings[b.dataset.setting as keyof Settings]));
+    });
   }
 
   /** Leaves a run for the screen it was started from. */
@@ -347,6 +398,8 @@ export class SankofaSnake {
   // Playing
 
   private startRun(mode: Mode, i: number) {
+    // Every way into a run is a button press, which iPhones need before they allow sound.
+    this.sound.unlock();
     this.mode = mode;
     if (mode !== "daily") this.listMode = mode;
     let level: LevelDef;
@@ -401,6 +454,10 @@ export class SankofaSnake {
     // Space and Enter on a focused button press that button.
     if (target?.closest("button") && (e.key === " " || e.key === "Enter")) return;
     if (target?.closest("input, textarea, select, [contenteditable]")) return;
+    if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      this.toggleSetting("sound");
+      return;
+    }
     const c = commandForKey(e);
     if (!c) return;
     e.preventDefault();
@@ -409,6 +466,7 @@ export class SankofaSnake {
 
   private command(c: Command) {
     if (!this.state) return;
+    this.sound.unlock();
     if (c.type === "turn") this.apply(turn(this.state, c.dir));
     else this.apply(togglePause(this.state));
   }
@@ -428,6 +486,7 @@ export class SankofaSnake {
 
   private onEvent(e: GameEvent) {
     const level = this.state.level;
+    this.sound.play(e, this.state.eaten);
     if (e.type === "ate") {
       const count = this.mode === "free" ? `Cowrie ${this.state.eaten}` : `Cowrie ${this.state.eaten} of ${level.goal}`;
       this.say(`${count}. Score ${this.state.score}.`);

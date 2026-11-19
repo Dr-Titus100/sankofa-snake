@@ -22,6 +22,33 @@ async function openUpTo(page: Page, ids: string[]) {
   );
 }
 
+/** Counts the notes the game plays and records each vibration, so a test can check them. */
+async function listenForSound(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as unknown as { notes: number; buzz: unknown[] };
+    w.notes = 0;
+    w.buzz = [];
+    const create = AudioContext.prototype.createOscillator;
+    AudioContext.prototype.createOscillator = function (this: AudioContext) {
+      w.notes++;
+      return create.call(this);
+    };
+    Object.defineProperty(Navigator.prototype, "vibrate", {
+      configurable: true,
+      value: (pattern: unknown) => {
+        w.buzz.push(pattern);
+        return true;
+      },
+    });
+  });
+}
+
+const soundLog = (page: Page) =>
+  page.evaluate(() => {
+    const w = window as unknown as { notes: number; buzz: unknown[] };
+    return { notes: w.notes, buzz: w.buzz };
+  });
+
 function watchErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
@@ -85,6 +112,26 @@ test("Choose a level and How to play turn gold under the pointer", async ({ page
   }
 });
 
+test("the sound and vibration switches start on and are remembered", async ({ page }) => {
+  await listenForSound(page);
+  await page.goto("/?seed=1");
+  await page.getByRole("button", { name: "How to play" }).click();
+  const sound = page.getByRole("button", { name: "Sound", exact: true });
+  const vibration = page.getByRole("button", { name: "Vibration", exact: true });
+  await expect(sound).toHaveAttribute("aria-pressed", "true");
+  await expect(vibration).toHaveAttribute("aria-pressed", "true");
+  await sound.click();
+  await vibration.click();
+  await expect(sound).toHaveAttribute("aria-pressed", "false");
+  await page.reload();
+  await page.getByRole("button", { name: "How to play" }).click();
+  await expect(page.getByRole("button", { name: "Sound", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Vibration", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.locator(".ss-bar").getByRole("button", { name: "Sound" })).toHaveAttribute("aria-pressed", "false");
+});
+
 test("only the first level is open on a first visit", async ({ page }) => {
   await page.goto("/?seed=1");
   await page.getByRole("button", { name: "Choose a level" }).click();
@@ -143,6 +190,33 @@ test.describe("on a computer", () => {
     await expect(page.locator("[data-overlay]").getByText("The snake ran into a market stall.")).toBeVisible();
     await page.getByRole("button", { name: "Play again" }).click();
     await expect(page.locator("[data-overlay]").getByText("Press an arrow key or swipe to start.")).toBeVisible();
+  });
+
+  test("a crash plays a sound and buzzes, and M turns the sound off", async ({ page }) => {
+    await listenForSound(page);
+    await page.clock.install();
+    await unlockAll(page);
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='2']").click();
+    // The same path as the market stall test above.
+    await page.keyboard.press("ArrowRight");
+    await page.clock.runFor(310);
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(600);
+    await expect(page.locator("[data-overlay]").getByText("Game over")).toBeVisible();
+    const first = await soundLog(page);
+    expect(first.notes).toBeGreaterThan(0);
+    expect(first.buzz).toContainEqual([90, 50, 160]);
+    await page.keyboard.press("m");
+    await expect(page.locator(".ss-bar").getByRole("button", { name: "Sound" })).toHaveAttribute("aria-pressed", "false");
+    await page.getByRole("button", { name: "Play again" }).click();
+    await page.keyboard.press("ArrowRight");
+    await page.clock.runFor(310);
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(600);
+    await expect(page.locator("[data-overlay]").getByText("Game over")).toBeVisible();
+    expect((await soundLog(page)).notes).toBe(first.notes);
   });
 
   test("in the City, the edge of the board is a wall", async ({ page }) => {
@@ -259,6 +333,23 @@ test.describe("on a phone", () => {
     await page.getByRole("button", { name: "Play", exact: true }).click();
     const widths = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
     expect(widths[0]).toBeLessThanOrEqual(widths[1]);
+  });
+
+  test("pressing Play starts the sound, so swipes alone don't leave it silent", async ({ page }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { audioStarts: number };
+      w.audioStarts = 0;
+      const Base = window.AudioContext;
+      window.AudioContext = class extends Base {
+        constructor(options?: AudioContextOptions) {
+          super(options);
+          w.audioStarts++;
+        }
+      };
+    });
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    expect(await page.evaluate(() => (window as unknown as { audioStarts: number }).audioStarts)).toBe(1);
   });
 
   test("a swipe starts the snake and a tap pauses it", async ({ page }) => {

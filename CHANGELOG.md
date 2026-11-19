@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 (2026-11-19)
+
+- Sound: short wooden notes for cowries, power-ups, currents, crashes and cleared levels. Each cowrie in a run plays the next note up a five-note scale. The browser makes the sounds, so the game loads no sound files.
+- Vibration: a short buzz on phones that support it when the snake eats, crashes or clears a level.
+- Off switches for sound and vibration on the How to play screen, a Sound switch next to Pause, and the M key. The game remembers the choice.
+- Teaching guides in `docs/teaching`: four lessons with questions, exercises and notes for the teacher.
+- The daily challenge says "road traffic" for worlds with trotros and taxis.
+
 ## 0.5.0 (2026-11-19)
 
 - Daily challenge: the date picks a world, its edges, a pace and whether power-ups appear. Everyone gets the same challenge and the same cowries that day. Clearing it on days in a row builds a streak.

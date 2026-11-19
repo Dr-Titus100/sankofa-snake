@@ -41,7 +41,7 @@ export function dailyLevel(date: string): LevelDef {
   const powerUps = base.powerUps ?? (pick() < 0.5 ? { kinds: ["slow", "shrink", "pass"], every: 3, lasts: 60 } : undefined);
   const parts = [edges === "walls" ? "solid walls" : "wrap-around edges", `a ${pace} pace`];
   if (powerUps) parts.push("power-ups");
-  if (base.vehicles?.length) parts.push("trotros and taxis");
+  if (base.vehicles?.length) parts.push("road traffic");
   const last = parts.pop();
   return {
     ...base,

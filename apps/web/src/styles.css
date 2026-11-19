@@ -339,3 +339,22 @@
 .ss-streak strong {
   color: var(--ss-gold);
 }
+
+/* Settings */
+.ss-subheading {
+  margin: 18px 0 8px;
+  font-size: 1.15rem;
+  color: var(--ss-gold);
+}
+/* The Sound switch in the game bar is struck through while the sound is off. */
+.ss-btn.ss-toggle[aria-pressed="false"] {
+  border-style: dashed;
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+/* A phone keeps the hover style after a tap, so the off switch keeps its plain look under the pointer. */
+.ss-btn.ss-toggle[aria-pressed="false"]:hover:not(:disabled) {
+  border-color: var(--ss-cream);
+  background: transparent;
+  color: var(--ss-cream);
+}
