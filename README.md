@@ -79,6 +79,8 @@ npm run dev         # rebuilds on every change at http://localhost:5173
 <script type="module" src="sankofa-snake.js"></script>
 ```
 
+Give the attribute the value `play` to leave out the How to play button, or `help` to show only the rules and the sound and vibration switches. A site can use the two to put the rules on a tab of their own, the way titusnyarkonde.com does.
+
 ## Releases
 
 The release workflow tests and builds the game, then attaches the built files to a GitHub release. Pushing a tag such as `v0.1.1` starts it. You can also start it by hand from the Actions tab with the tag name, and it creates the tag for you. The website pins one release and checks each file's checksum before it serves the game.

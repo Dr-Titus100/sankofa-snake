@@ -358,3 +358,7 @@
   background: transparent;
   color: var(--ss-cream);
 }
+/* The How to play heading takes focus when the screen opens, for screen readers, without a ring. */
+.ss-heading:focus {
+  outline: none;
+}

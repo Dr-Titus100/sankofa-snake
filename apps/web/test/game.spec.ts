@@ -84,7 +84,7 @@ test("the daily challenge is the same for everyone on a date and shows the strea
   const world = await page.locator(".ss-daily-card .ss-card-name").textContent();
   await page.getByRole("button", { name: "Play today's challenge" }).click();
   await expect(page.locator('[data-hud="level"]')).toHaveText(`Daily challenge: ${world}`);
-  await page.getByRole("button", { name: "Daily challenge", exact: true }).click();
+  await page.locator(".ss-bar").getByRole("button", { name: "Back" }).click();
   await expect(page.getByRole("heading", { name: "Daily challenge" })).toBeVisible();
 });
 
@@ -130,6 +130,39 @@ test("the sound and vibration switches start on and are remembered", async ({ pa
   await page.getByRole("button", { name: "Back" }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect(page.locator(".ss-bar").getByRole("button", { name: "Sound" })).toHaveAttribute("aria-pressed", "false");
+});
+
+test("How to play opens with its heading in focus and a plain Back button", async ({ page }) => {
+  await page.goto("/?seed=1");
+  await page.getByRole("button", { name: "How to play" }).click();
+  await expect(page.getByRole("heading", { name: "How to play" })).toBeFocused();
+  const back = page.getByRole("button", { name: "Back" });
+  await expect(back).not.toHaveClass(/ss-primary/);
+  await expect(back).not.toBeFocused();
+});
+
+/** A page with the game in one of its views, the way the website puts it on separate tabs. */
+async function viewPage(page: Page, view: string) {
+  await page.route(/\/view-test\.html/, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><link rel="stylesheet" href="/sankofa-snake.css"><div data-sankofa-snake="${view}"></div><script type="module" src="/sankofa-snake.js"></script>`,
+    }),
+  );
+  await page.goto("/view-test.html?seed=1");
+}
+
+test("the play view leaves out How to play, and the help view shows only the rules and switches", async ({ page }) => {
+  await viewPage(page, "play");
+  for (const name of ["Play", "Daily challenge", "Choose a level"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: "How to play" })).toHaveCount(0);
+  await viewPage(page, "help");
+  await expect(page.getByText("Eat 20 cowrie shells to clear a level")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sound", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Back" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toHaveCount(0);
 });
 
 test("only the first level is open on a first visit", async ({ page }) => {
@@ -294,7 +327,7 @@ test.describe("on a computer", () => {
     await page.clock.runFor(2300);
     await expect(page.locator("[data-overlay]").getByText("The snake hit the wall.")).toBeVisible();
     await expect(page.locator("[data-overlay]").getByText(/You collected \d+ cowries?\. Your best here is \d+\./)).toBeVisible();
-    await page.locator("[data-overlay]").getByRole("button", { name: "Free play" }).click();
+    await page.locator("[data-overlay]").getByRole("button", { name: "Back" }).click();
     await expect(page.getByRole("heading", { name: "Free play" })).toBeVisible();
   });
 
