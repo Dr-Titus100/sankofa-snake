@@ -1,0 +1,26 @@
+{
+  "name": "sankofa-snake",
+  "version": "0.1.0",
+  "description": "A snake game in kente colors, with the Sankofa symbol as its logo.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "Titus Nyarko Nde",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dr-Titus100/sankofa-snake.git"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --serve",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test --trace off"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

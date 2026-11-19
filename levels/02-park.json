@@ -1,0 +1,28 @@
+{
+  "id": "park",
+  "number": 2,
+  "name": "Park",
+  "world": "park",
+  "challenge": "The snake speeds up after every 5 cowries.",
+  "width": 20,
+  "height": 20,
+  "edges": "wrap",
+  "speed": {
+    "start": 6,
+    "step": 1,
+    "every": 5,
+    "max": 10
+  },
+  "goal": 20,
+  "parSeconds": 50,
+  "stars": [
+    560,
+    620
+  ],
+  "start": {
+    "x": 5,
+    "y": 10,
+    "dir": "right",
+    "length": 3
+  }
+}

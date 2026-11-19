@@ -1,0 +1,280 @@
+/* Sankofa Snake. Every rule is scoped to .ss-root so the game can sit inside any page. */
+.ss-root {
+  --ss-gold: #f2b705;
+  --ss-green: #1e8a3e;
+  --ss-red: #c8102e;
+  --ss-black: #141010;
+  --ss-cream: #f7eedc;
+  --ss-panel: #1d1517;
+  --ss-muted: #d9cdb8;
+  box-sizing: border-box;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, var(--ss-gold) 0 25%, var(--ss-green) 25% 50%, var(--ss-gold) 50% 75%, var(--ss-red) 75%) top / 100% 6px no-repeat,
+    var(--ss-panel);
+  color: var(--ss-cream);
+  font: inherit;
+  line-height: 1.5;
+  text-align: center;
+}
+.ss-root *,
+.ss-root *::before,
+.ss-root *::after {
+  box-sizing: border-box;
+}
+.ss-root [hidden] {
+  display: none !important;
+}
+.ss-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.ss-heading {
+  margin: 8px 0 8px;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  color: var(--ss-gold);
+}
+.ss-lead {
+  max-width: 34em;
+  margin: 0 auto 20px;
+}
+.ss-note {
+  margin: 16px auto 0;
+  max-width: 36em;
+  font-size: 0.9rem;
+  color: var(--ss-muted);
+}
+.ss-logo svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 45vw;
+  height: auto;
+}
+
+.ss-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.ss-btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 2px solid var(--ss-cream);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ss-cream);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ss-btn:hover {
+  background: rgba(247, 238, 220, 0.1);
+}
+.ss-btn.ss-primary {
+  border-color: var(--ss-gold);
+  background: var(--ss-gold);
+  color: var(--ss-black);
+}
+.ss-btn.ss-primary:hover {
+  background: #ffcb2e;
+}
+.ss-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.ss-root button:focus-visible {
+  outline: 3px solid var(--ss-gold);
+  outline-offset: 3px;
+}
+
+.ss-list {
+  max-width: 34em;
+  margin: 0 auto;
+  padding-left: 1.2em;
+  text-align: left;
+}
+.ss-list li + li {
+  margin-top: 8px;
+}
+
+/* Level cards */
+.ss-cards {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ss-card {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 14px 16px 14px 22px;
+  border: 2px solid rgba(247, 238, 220, 0.25);
+  border-radius: 14px;
+  background: #261c1f;
+  color: var(--ss-cream);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.ss-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 8px;
+  background: linear-gradient(var(--ss-gold) 0 30%, var(--ss-green) 30% 55%, var(--ss-red) 55% 70%, var(--ss-gold) 70%);
+}
+.ss-card:hover:not(:disabled) {
+  border-color: var(--ss-gold);
+}
+.ss-card:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.ss-card-top {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ss-muted);
+}
+.ss-card-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ss-gold);
+}
+.ss-card-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: var(--ss-muted);
+}
+.ss-stars {
+  color: var(--ss-gold);
+  letter-spacing: 0.1em;
+}
+.ss-stars.ss-big {
+  margin: 0;
+  font-size: 2rem;
+}
+
+/* Game screen */
+.ss-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 10px;
+}
+.ss-hud-level {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--ss-gold);
+}
+.ss-hud-stats {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+.ss-hud-stats div {
+  display: flex;
+  gap: 6px;
+}
+.ss-hud-stats dt {
+  color: var(--ss-muted);
+}
+.ss-hud-stats dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ss-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ss-canvas {
+  display: block;
+  border-radius: 8px;
+}
+.ss-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}
+.ss-panel {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 420px);
+  padding: 18px 16px;
+  border: 2px solid var(--ss-gold);
+  border-radius: 16px;
+  background: rgba(20, 16, 16, 0.9);
+}
+.ss-panel > * {
+  margin: 0;
+}
+/* Before the first move, the message sits low on the board and lets touches through, so the player
+   can see the board and swipe anywhere to start. */
+.ss-overlay-passive {
+  place-items: end center;
+  padding-bottom: 8%;
+  pointer-events: none;
+}
+.ss-overlay-passive .ss-panel {
+  background: rgba(20, 16, 16, 0.8);
+}
+.ss-overlay-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ss-gold);
+}
+.ss-overlay-hint {
+  font-weight: 600;
+}
+.ss-hint {
+  margin-top: 10px;
+}
+
+@media (max-width: 480px) {
+  .ss-root {
+    padding: 14px 10px;
+    border-radius: 12px;
+  }
+  .ss-heading {
+    font-size: 1.5rem;
+  }
+  .ss-hud-stats {
+    gap: 12px;
+    font-size: 0.95rem;
+  }
+}
+.ss-overlay-passive .ss-panel {
+  gap: 4px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+}
+.ss-overlay-passive .ss-overlay-title {
+  font-size: 1.1rem;
+}

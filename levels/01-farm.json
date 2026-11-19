@@ -1,0 +1,28 @@
+{
+  "id": "farm",
+  "number": 1,
+  "name": "Farm",
+  "world": "farm",
+  "challenge": "Learn the controls. The edges wrap around and the speed stays the same.",
+  "width": 20,
+  "height": 20,
+  "edges": "wrap",
+  "speed": {
+    "start": 6,
+    "step": 0,
+    "every": 5,
+    "max": 6
+  },
+  "goal": 20,
+  "parSeconds": 60,
+  "stars": [
+    260,
+    320
+  ],
+  "start": {
+    "x": 5,
+    "y": 10,
+    "dir": "right",
+    "length": 3
+  }
+}

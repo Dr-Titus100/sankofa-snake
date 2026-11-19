@@ -1,0 +1,231 @@
+import { describe, expect, it } from "vitest";
+import {
+  LEVELS,
+  createGame,
+  key,
+  placeFood,
+  starsFor,
+  tick,
+  togglePause,
+  turn,
+  validateLevel,
+  type GameState,
+  type LevelDef,
+} from "../src";
+
+const farm = LEVELS[0];
+
+/** A small open level for tests, so positions are easy to follow. */
+function testLevel(over: Partial<LevelDef> = {}): LevelDef {
+  return {
+    ...farm,
+    id: "test",
+    width: 10,
+    height: 10,
+    edges: "wrap",
+    goal: 3,
+    speed: { start: 5, step: 0, every: 5, max: 5 },
+    start: { x: 4, y: 5, dir: "right", length: 3 },
+    map: undefined,
+    ...over,
+  };
+}
+
+function run(state: GameState, moves: number): GameState {
+  for (let i = 0; i < moves; i++) state = tick(state).state;
+  return state;
+}
+
+function withFood(state: GameState, x: number, y: number): GameState {
+  return { ...state, food: { x, y } };
+}
+
+describe("starting a level", () => {
+  it("lays the snake out behind its head and waits", () => {
+    const g = createGame(testLevel(), 1);
+    expect(g.snake).toEqual([{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }]);
+    expect(g.status).toBe("ready");
+    expect(tick(g).state).toBe(g);
+  });
+
+  it("starts moving on the first direction", () => {
+    const g = turn(createGame(testLevel(), 1), "up");
+    expect(g.status).toBe("running");
+    expect(tick(g).state.snake[0]).toEqual({ x: 4, y: 4 });
+  });
+
+  it("ignores a first press back into the snake's own body", () => {
+    const g = turn(createGame(testLevel(), 1), "left");
+    expect(g.status).toBe("ready");
+  });
+});
+
+describe("turning", () => {
+  it("never reverses into the neck", () => {
+    let g = turn(createGame(testLevel(), 1), "right");
+    g = turn(g, "left");
+    expect(g.queue).toEqual([]);
+    expect(tick(g).state.snake[0]).toEqual({ x: 5, y: 5 });
+  });
+
+  it("keeps quick turns in order, up to two", () => {
+    let g = turn(createGame(testLevel(), 1), "up");
+    g = turn(g, "left");
+    g = turn(g, "down");
+    expect(g.queue).toEqual(["up", "left"]);
+    g = run(g, 2);
+    expect(g.snake[0]).toEqual({ x: 3, y: 4 });
+  });
+
+  it("checks a reverse against the last queued turn", () => {
+    let g = turn(createGame(testLevel(), 1), "up");
+    g = turn(g, "down");
+    expect(g.queue).toEqual(["up"]);
+  });
+});
+
+describe("edges", () => {
+  it("wraps to the other side on a wrap level", () => {
+    let g = withFood(turn(createGame(testLevel(), 1), "right"), 0, 0);
+    g = run(g, 5);
+    expect(g.snake[0]).toEqual({ x: 9, y: 5 });
+    g = run(g, 1);
+    expect(g.snake[0]).toEqual({ x: 0, y: 5 });
+    expect(g.status).toBe("running");
+  });
+
+  it("ends the run at a wall on a walls level", () => {
+    let g = withFood(turn(createGame(testLevel({ edges: "walls" }), 1), "right"), 0, 0);
+    g = run(g, 5);
+    const { state, events } = tick(g);
+    expect(state.status).toBe("over");
+    expect(state.crash).toBe("wall");
+    expect(events).toContainEqual({ type: "crash", cause: "wall" });
+  });
+});
+
+describe("eating and growing", () => {
+  it("grows by one and scores 10 points for a cowrie", () => {
+    let g = withFood(turn(createGame(testLevel(), 1), "right"), 5, 5);
+    const { state, events } = tick(g);
+    expect(state.snake).toHaveLength(4);
+    expect(state.eaten).toBe(1);
+    expect(state.score).toBe(10);
+    expect(events[0]).toMatchObject({ type: "ate", points: 10 });
+    expect(state.food).not.toBeNull();
+  });
+
+  it("never puts a cowrie on the snake or an obstacle", () => {
+    const level = LEVELS[2];
+    let g = createGame(level, 7);
+    for (let seed = 0; seed < 300; seed++) {
+      g = placeFood({ ...g, rng: seed });
+      const k = key(g.food!);
+      expect(g.obstacles.has(k)).toBe(false);
+      expect(g.snake.some((c) => key(c) === k)).toBe(false);
+    }
+  });
+
+  it("puts cowries in the same places for the same seed", () => {
+    const a = createGame(testLevel(), 42);
+    const b = createGame(testLevel(), 42);
+    expect(a.food).toEqual(b.food);
+  });
+});
+
+describe("crashing", () => {
+  it("ends the run when the head hits the body", () => {
+    // A snake of 5 cells turning in a tight square runs into itself.
+    let g = createGame(testLevel({ start: { x: 4, y: 5, dir: "right", length: 5 } }), 1);
+    g = withFood(g, 0, 0);
+    for (const d of ["down", "left", "up"] as const) g = tick(turn(g, d)).state;
+    expect(g.status).toBe("over");
+    expect(g.crash).toBe("self");
+  });
+
+  it("lets the head move into the cell the tail is leaving", () => {
+    let g = createGame(testLevel({ start: { x: 4, y: 5, dir: "right", length: 4 } }), 1);
+    g = withFood(g, 0, 0);
+    for (const d of ["down", "left", "up"] as const) g = tick(turn(g, d)).state;
+    expect(g.status).toBe("running");
+  });
+
+  it("ends the run on an obstacle", () => {
+    const map = Array.from({ length: 10 }, (_, y) => (y === 5 ? "......#..." : ".........."));
+    let g = withFood(turn(createGame(testLevel({ map }), 1), "right"), 0, 0);
+    g = run(g, 2);
+    expect(g.status).toBe("over");
+    expect(g.crash).toBe("obstacle");
+    expect(g.crashAt).toEqual({ x: 6, y: 5 });
+  });
+});
+
+describe("speed", () => {
+  it("speeds up after every few cowries and stops at the cap", () => {
+    const level = testLevel({ goal: 50, speed: { start: 5, step: 2, every: 2, max: 8 } });
+    let g = turn(createGame(level, 1), "right");
+    const speeds: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const head = g.snake[0];
+      g = tick(withFood(g, (head.x + 1) % 10, head.y)).state;
+      speeds.push(g.speed);
+    }
+    expect(speeds).toEqual([5, 7, 7, 8, 8, 8]);
+  });
+
+  it("makes each cowrie worth more after a speed-up", () => {
+    const level = testLevel({ goal: 50, speed: { start: 5, step: 1, every: 1, max: 9 } });
+    let g = turn(createGame(level, 1), "right");
+    let head = g.snake[0];
+    g = tick(withFood(g, head.x + 1, head.y)).state;
+    head = g.snake[0];
+    g = tick(withFood(g, head.x + 1, head.y)).state;
+    expect(g.score).toBe(10 + 20);
+  });
+});
+
+describe("clearing a level", () => {
+  it("clears at the goal and adds a time bonus", () => {
+    const level = testLevel({ goal: 2, parSeconds: 10, stars: [40, 80] });
+    let g = turn(createGame(level, 1), "right");
+    let head = g.snake[0];
+    g = tick(withFood(g, head.x + 1, head.y)).state;
+    head = g.snake[0];
+    const { state, events } = tick(withFood(g, head.x + 1, head.y));
+    expect(state.status).toBe("cleared");
+    // Two moves at 5 moves a second take 0.4 seconds, so the bonus is (10 - 0) * 5 = 50.
+    expect(events.at(-1)).toEqual({ type: "cleared", score: 20 + 50, stars: 2, timeBonus: 50 });
+  });
+
+  it("gives one, two or three stars by score", () => {
+    const level = testLevel({ stars: [100, 200] });
+    expect(starsFor(level, 50)).toBe(1);
+    expect(starsFor(level, 100)).toBe(2);
+    expect(starsFor(level, 250)).toBe(3);
+  });
+});
+
+describe("pausing", () => {
+  it("stops the snake while paused", () => {
+    let g = togglePause(turn(createGame(testLevel(), 1), "right"));
+    expect(g.status).toBe("paused");
+    expect(tick(g).state).toBe(g);
+    expect(turn(g, "up")).toBe(g);
+    expect(togglePause(g).status).toBe("running");
+  });
+});
+
+describe("level files", () => {
+  it.each(LEVELS.map((l) => [l.name, l] as const))("%s has no mistakes", (_, level) => {
+    expect(validateLevel(level)).toEqual([]);
+  });
+
+  it("numbers the levels 1, 2, 3 in order", () => {
+    expect(LEVELS.map((l) => l.number)).toEqual(LEVELS.map((_, i) => i + 1));
+  });
+
+  it("catches a start on an obstacle", () => {
+    const map = Array.from({ length: 10 }, (_, y) => (y === 5 ? "....#....." : ".........."));
+    expect(validateLevel(testLevel({ map }))).toContain("start cell 4,5 is on an obstacle");
+  });
+});
