@@ -11,8 +11,10 @@ Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/g
 | 1 | Farm | Learn the controls. The edges wrap around and the speed stays the same. |
 | 2 | Park | The snake speeds up after every 5 cowries. |
 | 3 | Market | Market stalls block parts of the board. |
+| 4 | City | Solid walls. Hitting the edge of the board ends the run. |
+| 5 | Road | Trotros and taxis drive across the board. They stop for the snake, so only the snake's head can hit one. |
 
-Eat 20 cowries to clear a level and open the next one. Clearing a level earns one star, and a high score with a fast finish earns up to two more. City, Road, Lab, Maze, Ocean and the Weaving village come next.
+Eat 20 cowries to clear a level and open the next one. Clearing a level earns one star, and a high score with a fast finish earns up to two more. Lab, Maze, Ocean and the Weaving village come next.
 
 ## Controls
 
@@ -31,7 +33,7 @@ scripts/         the build script
 
 The rules and the drawing live in separate folders on purpose. `packages/core` decides where the snake goes, what it eats and when a run ends. `apps/web` only draws the board and reads the keyboard and touch screen. The same rules will run the phone apps later.
 
-A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
+A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and the Road's trotros and taxis are listed under `vehicles` in `levels/05-road.json`, each with its lane, direction, length and speed. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
 
 The cowries land in random places, but the random numbers come from a seed. The same seed always gives the same game, which the tests rely on and which a daily challenge will use later. Add `?seed=42` to the game's address to try it.
 

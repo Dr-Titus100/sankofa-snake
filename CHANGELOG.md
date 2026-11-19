@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 (2026-11-19)
+
+- Level 4, City: the edge of the board is a solid wall, and buildings stand in blocks with streets between them.
+- Level 5, Road: trotros and taxis drive along three roads. They stop for the snake, so the run ends only if the snake's head runs into one.
+- The message after a crash names what the snake hit, such as a building or a taxi.
+- Walled levels have a red line inside the kente frame.
+
 ## 0.1.1 (2026-11-19)
 
 - Every button turns kente gold under the pointer, including Choose a level and How to play.

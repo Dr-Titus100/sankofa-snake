@@ -18,11 +18,22 @@ import { loadProgress, recordRun, saveProgress, type Progress } from "./storage"
 
 type Screen = "title" | "levels" | "help" | "game";
 
-const CRASH_TEXT = {
-  self: "The snake ran into its own tail.",
-  wall: "The snake hit the wall.",
-  obstacle: "The snake ran into a market stall.",
-};
+/** What the obstacles are in each world, for the message after a crash. */
+const OBSTACLE_NAME: Record<string, string> = { market: "a market stall", city: "a building" };
+
+/** One sentence saying what ended the run. */
+function crashText(s: GameState): string {
+  switch (s.crash) {
+    case "wall":
+      return "The snake hit the wall.";
+    case "obstacle":
+      return `The snake ran into ${OBSTACLE_NAME[s.level.world] ?? "an obstacle"}.`;
+    case "vehicle":
+      return `The snake ran into a ${s.crashVehicle ?? "car"}.`;
+    default:
+      return "The snake ran into its own tail.";
+  }
+}
 
 const starText = (n: number) => "★".repeat(n) + "☆".repeat(3 - n);
 
@@ -105,7 +116,7 @@ export class SankofaSnake {
       <ul class="ss-list">
         <li>Steer with the arrow keys or W, A, S and D. On a phone, swipe in the direction you want to go.</li>
         <li>Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.</li>
-        <li>The run ends if the snake hits its own tail, a wall or a market stall.</li>
+        <li>The run ends if the snake runs into its own tail, an obstacle or a vehicle. Vehicles stop for the snake, so cross the road in front of them or behind them. In the City and on the Road, the edge of the board is a wall too.</li>
         <li>Pause with Space, P or Escape, or tap the board on a phone. The game also pauses when you switch tabs.</li>
         <li>Clearing a level earns one star. A high score and a fast finish earn up to two more.</li>
       </ul>
@@ -136,7 +147,7 @@ export class SankofaSnake {
     el.innerHTML = `
       <h2 class="ss-heading">Levels</h2>
       <ul class="ss-cards">${cards}</ul>
-      <p class="ss-note">More worlds are on the way: City, Road, Lab, Maze, Ocean and the Weaving village.</p>
+      <p class="ss-note">More worlds are on the way: Lab, Maze, Ocean and the Weaving village.</p>
       <div class="ss-actions"><button class="ss-btn" data-go="title">Back</button></div>`;
     el.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((b) => {
       b.addEventListener("click", () => this.startLevel(Number(b.dataset.level)));
@@ -270,7 +281,7 @@ export class SankofaSnake {
     if (e.type === "crash") {
       this.progress = recordRun(this.progress, level.id, this.state.score, 0, false);
       saveProgress(this.progress);
-      this.say(`${CRASH_TEXT[e.cause]} Score ${this.state.score}.`);
+      this.say(`${crashText(this.state)} Score ${this.state.score}.`);
     }
     if (e.type === "cleared") {
       this.lastClear = e;
@@ -317,7 +328,7 @@ export class SankofaSnake {
     } else if (s.status === "over") {
       html = `
         <p class="ss-overlay-title">Game over</p>
-        <p>${CRASH_TEXT[s.crash ?? "self"]}</p>
+        <p>${crashText(s)}</p>
         <p>You collected ${s.eaten} of ${level.goal} cowries. Score ${s.score}.</p>
         <div class="ss-actions">
           <button class="ss-btn ss-primary" data-again>Play again</button>

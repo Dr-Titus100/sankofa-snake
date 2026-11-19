@@ -11,13 +11,37 @@ export interface Cell {
 /** What happens when the snake moves past the edge of the board. */
 export type Edges = "wrap" | "walls";
 
+/** The places a level can take place in. Each one has its own scenery in the web game. */
+export type World = "farm" | "park" | "market" | "city" | "road";
+
+/**
+ * A vehicle that drives along one row or column of the board and comes back around at the far
+ * edge. It moves one cell every few snake moves, so it speeds up when the snake does. It stops
+ * and waits while the snake or another vehicle is in the way, so only the snake's head can hit it.
+ */
+export interface VehicleDef {
+  kind: "trotro" | "taxi";
+  /** "row" drives left or right along a row. "column" drives up or down a column. */
+  axis: "row" | "column";
+  /** The row or column number the vehicle drives along. */
+  lane: number;
+  /** 1 drives right or down. -1 drives left or up. */
+  dir: 1 | -1;
+  /** How many cells long the vehicle is. */
+  length: number;
+  /** The vehicle moves one cell every this many snake moves. */
+  every: number;
+  /** Where the front of the vehicle starts along its lane. */
+  start: number;
+}
+
 /** One level, as written in a file in the levels/ folder. */
 export interface LevelDef {
   id: string;
   number: number;
   name: string;
   /** Which scenery the web game draws for this level. */
-  world: "farm" | "park" | "market";
+  world: World;
   /** One sentence the level card shows, saying what is new in this level. */
   challenge: string;
   width: number;
@@ -45,9 +69,13 @@ export interface LevelDef {
    * Leave it out for a board with no obstacles.
    */
   map?: string[];
+  /** Vehicles driving across the board. Running the snake's head into one ends the run. */
+  vehicles?: VehicleDef[];
 }
 
 export type Status = "ready" | "running" | "paused" | "over" | "cleared";
+
+export type Crash = "self" | "wall" | "obstacle" | "vehicle";
 
 export interface GameState {
   level: LevelDef;
@@ -70,9 +98,15 @@ export interface GameState {
   grow: number;
   /** Game time in milliseconds, counted by moves, so pauses don't count. */
   elapsedMs: number;
+  /** How many moves the snake has made. Vehicles count their moves from it. */
+  moves: number;
+  /** Where the front of each vehicle is along its lane, in the order of level.vehicles. */
+  vehicles: number[];
   status: Status;
   /** What ended the run, when status is "over". */
-  crash?: "self" | "wall" | "obstacle";
+  crash?: Crash;
+  /** The kind of vehicle the snake ran into, when crash is "vehicle". */
+  crashVehicle?: VehicleDef["kind"];
   /** The cell the snake tried to move into when it crashed. */
   crashAt?: Cell;
   /** The random number generator's state, so a seed always gives the same cowrie spots. */
@@ -82,5 +116,5 @@ export interface GameState {
 export type GameEvent =
   | { type: "ate"; at: Cell; points: number }
   | { type: "speedup"; speed: number }
-  | { type: "crash"; cause: "self" | "wall" | "obstacle" }
+  | { type: "crash"; cause: Crash }
   | { type: "cleared"; score: number; stars: number; timeBonus: number };

@@ -11,6 +11,17 @@ async function unlockAll(page: Page) {
   }, SAVE_KEY);
 }
 
+/** Marks every level before the given one as cleared, so the given level is open. */
+async function openUpTo(page: Page, ids: string[]) {
+  await page.addInitScript(
+    ([key, list]) => {
+      const levels = Object.fromEntries((list as string[]).map((id) => [id, { best: 300, stars: 1, cleared: true }]));
+      localStorage.setItem(key as string, JSON.stringify({ levels }));
+    },
+    [SAVE_KEY, ids],
+  );
+}
+
 function watchErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
@@ -99,6 +110,33 @@ test.describe("on a computer", () => {
     await expect(page.locator("[data-overlay]").getByText("The snake ran into a market stall.")).toBeVisible();
     await page.getByRole("button", { name: "Play again" }).click();
     await expect(page.locator("[data-overlay]").getByText("Press an arrow key or swipe to start.")).toBeVisible();
+  });
+
+  test("in the City, the edge of the board is a wall", async ({ page }) => {
+    await page.clock.install();
+    await openUpTo(page, ["farm", "park", "market"]);
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='3']").click();
+    // The City runs at 7 moves a second. The head starts at row 10 in an open column, so 11 moves up hit the top wall.
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(1900);
+    await expect(page.locator("[data-overlay]").getByText("The snake hit the wall.")).toBeVisible();
+  });
+
+  test("on the Road, running into a taxi ends the run", async ({ page }) => {
+    await page.clock.install();
+    await openUpTo(page, ["farm", "park", "market", "city"]);
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='4']").click();
+    // The Road runs at 6 moves a second, about 167 ms a move. Six moves right and then three up
+    // put the head on row 7 just as the taxi on that row reaches it.
+    await page.keyboard.press("ArrowRight");
+    await page.clock.runFor(1080);
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(700);
+    await expect(page.locator("[data-overlay]").getByText("The snake ran into a taxi.")).toBeVisible();
   });
 });
 

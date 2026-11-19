@@ -5,7 +5,7 @@
 // makes each move easy to test and easy to reason about.
 import { nextRandom } from "./rng";
 import { obstacleKeys } from "./levels";
-import type { Cell, Direction, GameEvent, GameState, LevelDef } from "./types";
+import type { Cell, Crash, Direction, GameEvent, GameState, LevelDef, VehicleDef } from "./types";
 
 const STEP: Record<Direction, Cell> = {
   up: { x: 0, y: -1 },
@@ -41,6 +41,8 @@ export function createGame(level: LevelDef, seed: number): GameState {
     speedLevel: 1,
     grow: 0,
     elapsedMs: 0,
+    moves: 0,
+    vehicles: (level.vehicles ?? []).map((v) => v.start),
     status: "ready",
     rng: seed >>> 0,
   };
@@ -83,28 +85,35 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
 
   const queue = [...state.queue];
   const dir = queue.length ? (queue.shift() as Direction) : state.dir;
+  // Vehicles move first, on the same beat as the snake, and wait while the snake is in their way.
+  const moves = state.moves + 1;
+  const vehicles = moveVehicles(level, state.vehicles, moves, state.snake);
+  const moved: GameState = { ...state, moves, vehicles };
+
   const head = state.snake[0];
   let next: Cell = { x: head.x + STEP[dir].x, y: head.y + STEP[dir].y };
   const elapsedMs = state.elapsedMs + moveMs(state);
 
   const outside = next.x < 0 || next.y < 0 || next.x >= level.width || next.y >= level.height;
-  if (outside && level.edges === "walls") return crash(state, "wall", next, dir, elapsedMs, events);
+  if (outside && level.edges === "walls") return crash(moved, "wall", next, dir, elapsedMs, events);
   next = wrapCell(next, level);
 
-  if (state.obstacles.has(key(next))) return crash(state, "obstacle", next, dir, elapsedMs, events);
+  if (state.obstacles.has(key(next))) return crash(moved, "obstacle", next, dir, elapsedMs, events);
+  const vehicle = vehicleAt(level, vehicles, next);
+  if (vehicle) return crash(moved, "vehicle", next, dir, elapsedMs, events, vehicle);
 
   const eating = state.food !== null && sameCell(next, state.food);
   // The tail moves out of its cell on this move unless the snake is growing,
   // so the head may safely move into the cell the tail is leaving.
   const tailMoves = !eating && state.grow === 0;
   const body = tailMoves ? state.snake.slice(0, -1) : state.snake;
-  if (body.some((c) => sameCell(c, next))) return crash(state, "self", next, dir, elapsedMs, events);
+  if (body.some((c) => sameCell(c, next))) return crash(moved, "self", next, dir, elapsedMs, events);
 
   const snake = [next, ...body];
   let { grow, eaten, score, speed, speedLevel } = state;
   if (!eating && grow > 0) grow -= 1;
 
-  let nextState: GameState = { ...state, snake, dir, queue, grow, elapsedMs };
+  let nextState: GameState = { ...moved, snake, dir, queue, grow, elapsedMs };
   if (!eating) return { state: nextState, events };
 
   eaten += 1;
@@ -138,14 +147,71 @@ export function starsFor(level: LevelDef, score: number): number {
 
 function crash(
   state: GameState,
-  cause: "self" | "wall" | "obstacle",
+  cause: Crash,
   at: Cell,
   dir: Direction,
   elapsedMs: number,
   events: GameEvent[],
+  vehicle?: VehicleDef["kind"],
 ): { state: GameState; events: GameEvent[] } {
   events.push({ type: "crash", cause });
-  return { state: { ...state, dir, queue: [], elapsedMs, status: "over", crash: cause, crashAt: at }, events };
+  const over: GameState = { ...state, dir, queue: [], elapsedMs, status: "over", crash: cause, crashAt: at };
+  if (vehicle) over.crashVehicle = vehicle;
+  return { state: over, events };
+}
+
+/**
+ * The cells a vehicle covers when its front is at the given place along its lane, front first.
+ * The vehicle comes back around at the far edge, so its cells can sit at both edges at once.
+ */
+export function vehicleCells(v: VehicleDef, level: LevelDef, front: number): Cell[] {
+  const laneLength = v.axis === "row" ? level.width : level.height;
+  const cells: Cell[] = [];
+  for (let i = 0; i < v.length; i++) {
+    const along = (((front - v.dir * i) % laneLength) + laneLength) % laneLength;
+    cells.push(v.axis === "row" ? { x: along, y: v.lane } : { x: v.lane, y: along });
+  }
+  return cells;
+}
+
+/** Every cell covered by a vehicle right now, as "x,y" keys. */
+export function vehicleKeys(state: GameState): Set<string> {
+  const keys = new Set<string>();
+  state.level.vehicles?.forEach((v, i) => {
+    for (const c of vehicleCells(v, state.level, state.vehicles[i])) keys.add(key(c));
+  });
+  return keys;
+}
+
+/** The kind of vehicle on a cell, or null when the cell is clear. */
+function vehicleAt(level: LevelDef, fronts: number[], cell: Cell): VehicleDef["kind"] | null {
+  const vs = level.vehicles ?? [];
+  for (let i = 0; i < vs.length; i++) {
+    if (vehicleCells(vs[i], level, fronts[i]).some((c) => sameCell(c, cell))) return vs[i].kind;
+  }
+  return null;
+}
+
+/**
+ * Moves each vehicle one cell when its turn comes. A vehicle waits instead when the next cell is
+ * part of the snake or another vehicle, the way a driver brakes for someone crossing the road.
+ */
+function moveVehicles(level: LevelDef, fronts: number[], moves: number, snake: Cell[]): number[] {
+  const vs = level.vehicles ?? [];
+  if (!vs.length) return fronts;
+  const next = [...fronts];
+  const snakeKeys = new Set(snake.map(key));
+  vs.forEach((v, i) => {
+    if (moves % v.every !== 0) return;
+    const ahead = vehicleCells(v, level, next[i] + v.dir)[0];
+    const k = key(ahead);
+    const blocked = snakeKeys.has(k) || vs.some((o, j) => j !== i && vehicleCells(o, level, next[j]).some((c) => key(c) === k));
+    if (!blocked) {
+      const laneLength = v.axis === "row" ? level.width : level.height;
+      next[i] = (((next[i] + v.dir) % laneLength) + laneLength) % laneLength;
+    }
+  });
+  return next;
 }
 
 function wrapCell(c: Cell, level: LevelDef): Cell {
@@ -155,9 +221,10 @@ function wrapCell(c: Cell, level: LevelDef): Cell {
   };
 }
 
-/** Puts a cowrie on a random open cell, never on the snake or an obstacle. */
+/** Puts a cowrie on a random open cell, never on the snake, an obstacle or a vehicle. */
 export function placeFood(state: GameState): GameState {
   const taken = new Set(state.snake.map(key));
+  for (const k of vehicleKeys(state)) taken.add(k);
   const open: Cell[] = [];
   for (let y = 0; y < state.level.height; y++) {
     for (let x = 0; x < state.level.width; x++) {

@@ -4,9 +4,11 @@
 import farm from "../../../levels/01-farm.json";
 import park from "../../../levels/02-park.json";
 import market from "../../../levels/03-market.json";
+import city from "../../../levels/04-city.json";
+import road from "../../../levels/05-road.json";
 import type { LevelDef } from "./types";
 
-export const LEVELS: LevelDef[] = [farm, park, market] as LevelDef[];
+export const LEVELS: LevelDef[] = [farm, park, market, city, road] as LevelDef[];
 
 /** The obstacle cells of a level, as "x,y" keys. */
 export function obstacleKeys(level: LevelDef): Set<string> {
@@ -39,14 +41,31 @@ export function validateLevel(level: LevelDef): string[] {
   if (level.goal < 1) problems.push("the goal must be at least one cowrie");
   if (level.stars[0] > level.stars[1]) problems.push("the three-star score must be at least the two-star score");
 
-  // The snake's starting cells must be on open ground and inside the board.
+  // Vehicles must stay inside the board, on lanes with no obstacles.
   const obstacles = obstacleKeys(level);
+  const lanes = new Set<string>();
+  level.vehicles?.forEach((v, i) => {
+    const across = v.axis === "row" ? height : width;
+    const along = v.axis === "row" ? width : height;
+    if (!Number.isInteger(v.lane) || v.lane < 0 || v.lane >= across) problems.push(`vehicle ${i} drives on a lane off the board`);
+    if (v.length < 1 || v.length >= along) problems.push(`vehicle ${i} must be shorter than its lane`);
+    if (!Number.isInteger(v.every) || v.every < 1) problems.push(`vehicle ${i} must move every 1 or more snake moves`);
+    if (v.start < 0 || v.start >= along) problems.push(`vehicle ${i} starts off the board`);
+    for (let p = 0; p < along; p++) {
+      const cell = v.axis === "row" ? `${p},${v.lane}` : `${v.lane},${p}`;
+      lanes.add(cell);
+      if (obstacles.has(cell)) problems.push(`vehicle ${i} drives through the obstacle at ${cell}`);
+    }
+  });
+
+  // The snake's starting cells must be on open ground, inside the board and off every road.
   const back = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[start.dir];
   for (let i = 0; i < start.length; i++) {
     const x = start.x + back[0] * i;
     const y = start.y + back[1] * i;
     if (x < 0 || y < 0 || x >= width || y >= height) problems.push(`start cell ${x},${y} is off the board`);
     else if (obstacles.has(`${x},${y}`)) problems.push(`start cell ${x},${y} is on an obstacle`);
+    else if (lanes.has(`${x},${y}`)) problems.push(`start cell ${x},${y} is on a vehicle's lane`);
   }
   return problems;
 }

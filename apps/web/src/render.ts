@@ -1,6 +1,7 @@
-// Draws the board on a canvas: the kente frame, the scenery of each world, the market stalls,
-// the cowrie and the snake made of woven blocks. Nothing here changes the game.
-import type { Cell, Direction, GameState, LevelDef } from "../../../packages/core/src";
+// Draws the board on a canvas: the kente frame, the scenery of each world, the market stalls and
+// city buildings, the roads and their vehicles, the cowrie and the snake made of woven blocks.
+// Nothing here changes the game.
+import { vehicleCells, type Cell, type Direction, type GameState, type LevelDef, type VehicleDef } from "../../../packages/core/src";
 import { KENTE as K } from "./logo";
 
 interface World {
@@ -70,6 +71,37 @@ const WORLDS: Record<LevelDef["world"], World> = {
       }
     },
   },
+  city: {
+    ground: "#1E1F26",
+    detail(ctx, x, y, s, cx, cy) {
+      // Paving slabs, and now and then a drain cover.
+      ctx.strokeStyle = "rgba(255,255,255,0.05)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + s * 0.08, y + s * 0.08, s * 0.84, s * 0.84);
+      if (cellHash(cx, cy) % 17 === 3) {
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(x + s * 0.3, y + s * 0.3, s * 0.4, s * 0.4);
+      }
+    },
+  },
+  road: {
+    ground: "#3A2A1C",
+    detail(ctx, x, y, s, cx, cy) {
+      // Red-earth roadside with a few stones.
+      if (cellHash(cx, cy) % 7 === 2) {
+        ctx.fillStyle = "rgba(255,230,200,0.12)";
+        ctx.beginPath();
+        ctx.arc(x + s * 0.35, y + s * 0.6, s * 0.07, 0, Math.PI * 2);
+        ctx.arc(x + s * 0.62, y + s * 0.45, s * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+  },
+};
+
+/** How each world draws its obstacles. */
+const OBSTACLES: Partial<Record<LevelDef["world"], typeof drawStall>> = {
+  city: drawBuilding,
 };
 
 export interface Layout {
@@ -114,9 +146,13 @@ export function draw(ctx: CanvasRenderingContext2D, state: GameState, layout: La
   }
   ctx.stroke();
 
+  for (const v of level.vehicles ?? []) drawLane(ctx, v, layout, level);
+  if (level.edges === "walls") drawWalls(ctx, layout);
+
+  const drawObstacle = OBSTACLES[level.world] ?? drawStall;
   for (const k of state.obstacles) {
     const [cx, cy] = k.split(",").map(Number);
-    drawStall(ctx, frame + cx * cell, frame + cy * cell, cell, state.obstacles.has(`${cx},${cy - 1}`));
+    drawObstacle(ctx, frame + cx * cell, frame + cy * cell, cell, state.obstacles.has(`${cx},${cy - 1}`), cx, cy);
   }
 
   if (state.food) {
@@ -132,6 +168,9 @@ export function draw(ctx: CanvasRenderingContext2D, state: GameState, layout: La
     if (i === 0) drawHead(ctx, x, y, cell, state.dir);
     else drawWoven(ctx, x, y, cell, i % 2);
   }
+
+  // Vehicles go on top of everything else on the board, so a collision is easy to see.
+  level.vehicles?.forEach((v, i) => drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout));
 
   if (state.status === "over" && state.crashAt) drawCrash(ctx, state.crashAt, layout);
 }
@@ -278,7 +317,7 @@ function drawCowrie(ctx: CanvasRenderingContext2D, x: number, y: number, s: numb
 }
 
 /** A market stall: a striped kente awning over a wooden crate, or produce in a stall's back row. */
-function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, backRow: boolean) {
+function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, backRow: boolean, _cx = 0, _cy = 0) {
   const pad = s * 0.04;
   ctx.fillStyle = "#7A4E2D";
   ctx.fillRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
@@ -320,6 +359,144 @@ function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.strokeStyle = K.black;
   ctx.lineWidth = Math.max(1, s * 0.06);
   ctx.strokeRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+}
+
+/**
+ * A city building seen from above: a dark roof with a kente-colored band along its front edge and
+ * lit windows. The colors change from block to block.
+ */
+function drawBuilding(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, backRow: boolean, cx = 0, cy = 0) {
+  const h = cellHash(cx, cy);
+  ctx.fillStyle = ["#3B3540", "#463A33", "#33403A"][h % 3];
+  ctx.fillRect(x, y, s, s);
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.lineWidth = Math.max(1, s * 0.05);
+  ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+  if (!backRow) {
+    const stripes = [K.gold, K.green, K.red];
+    stripes.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y + s * (0.04 + i * 0.07), s, s * 0.07);
+    });
+  }
+  // Two rows of windows, some lit.
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      const lit = (h >> (r * 2 + c)) & 1;
+      ctx.fillStyle = lit ? "rgba(242,183,5,0.75)" : "rgba(247,238,220,0.12)";
+      ctx.fillRect(x + s * (0.2 + c * 0.38), y + s * (backRow ? 0.2 : 0.38) + r * s * 0.3, s * 0.22, s * 0.18);
+    }
+  }
+}
+
+/** A strip of tarmac along a vehicle's lane, with a dashed center line. */
+function drawLane(ctx: CanvasRenderingContext2D, v: VehicleDef, layout: Layout, level: LevelDef) {
+  const { frame, cell } = layout;
+  const long = (v.axis === "row" ? level.width : level.height) * cell;
+  const across = frame + v.lane * cell;
+  ctx.fillStyle = "#26252A";
+  if (v.axis === "row") ctx.fillRect(frame, across, long, cell);
+  else ctx.fillRect(across, frame, cell, long);
+  ctx.strokeStyle = "rgba(247,238,220,0.35)";
+  ctx.lineWidth = Math.max(1, cell * 0.06);
+  ctx.setLineDash([cell * 0.4, cell * 0.35]);
+  ctx.beginPath();
+  if (v.axis === "row") {
+    ctx.moveTo(frame, across + cell / 2);
+    ctx.lineTo(frame + long, across + cell / 2);
+  } else {
+    ctx.moveTo(across + cell / 2, frame);
+    ctx.lineTo(across + cell / 2, frame + long);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** A red line just inside the kente frame, so walled levels look different from wrap-around ones. */
+function drawWalls(ctx: CanvasRenderingContext2D, layout: Layout) {
+  const { frame, size, cell } = layout;
+  const w = Math.max(2, cell * 0.14);
+  ctx.strokeStyle = K.red;
+  ctx.lineWidth = w;
+  ctx.strokeRect(frame + w / 2, frame + w / 2, size - frame * 2 - w, size - frame * 2 - w);
+}
+
+/**
+ * A vehicle seen from above. A trotro is a gold minibus with a kente band down its side. A taxi is
+ * smaller, gold with red corners, like the taxis in Accra. A vehicle that wraps around the edge of
+ * the board is drawn in two pieces.
+ */
+function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[], layout: Layout) {
+  const { frame, cell } = layout;
+  // Split the cells into runs that sit side by side on the board.
+  const runs: Cell[][] = [];
+  for (const c of cells) {
+    const last = runs[runs.length - 1]?.[runs[runs.length - 1].length - 1];
+    if (last && Math.abs(last.x - c.x) + Math.abs(last.y - c.y) === 1) runs[runs.length - 1].push(c);
+    else runs.push([c]);
+  }
+  const forward = v.axis === "row" ? (v.dir === 1 ? "right" : "left") : v.dir === 1 ? "down" : "up";
+  runs.forEach((run, r) => {
+    const xs = run.map((c) => c.x);
+    const ys = run.map((c) => c.y);
+    const x = frame + Math.min(...xs) * cell;
+    const y = frame + Math.min(...ys) * cell;
+    const w = (Math.max(...xs) - Math.min(...xs) + 1) * cell;
+    const h = (Math.max(...ys) - Math.min(...ys) + 1) * cell;
+    const pad = cell * 0.08;
+    const bx = x + pad;
+    const by = y + pad;
+    const bw = w - pad * 2;
+    const bh = h - pad * 2;
+    // Wheels.
+    ctx.fillStyle = K.black;
+    const wheel = cell * 0.18;
+    if (v.axis === "row") {
+      for (const fx of [0.18, 0.82]) {
+        ctx.fillRect(bx + bw * fx - wheel / 2, by - pad * 0.6, wheel, pad * 1.2);
+        ctx.fillRect(bx + bw * fx - wheel / 2, by + bh - pad * 0.6, wheel, pad * 1.2);
+      }
+    } else {
+      for (const fy of [0.18, 0.82]) {
+        ctx.fillRect(bx - pad * 0.6, by + bh * fy - wheel / 2, pad * 1.2, wheel);
+        ctx.fillRect(bx + bw - pad * 0.6, by + bh * fy - wheel / 2, pad * 1.2, wheel);
+      }
+    }
+    // Body.
+    ctx.fillStyle = K.gold;
+    roundRect(ctx, bx, by, bw, bh, cell * 0.18);
+    ctx.fill();
+    if (v.kind === "trotro") {
+      // A kente band along the side.
+      const band = [K.green, K.red, K.green];
+      band.forEach((color, i) => {
+        ctx.fillStyle = color;
+        if (v.axis === "row") ctx.fillRect(bx, by + bh * (0.62 + i * 0.08), bw, bh * 0.08);
+        else ctx.fillRect(bx + bw * (0.62 + i * 0.08), by, bw * 0.08, bh);
+      });
+    } else {
+      // Red corners, as on Ghana's taxis.
+      ctx.fillStyle = K.red;
+      const c = cell * 0.22;
+      ctx.fillRect(bx, by, c, c);
+      ctx.fillRect(bx + bw - c, by, c, c);
+      ctx.fillRect(bx, by + bh - c, c, c);
+      ctx.fillRect(bx + bw - c, by + bh - c, c, c);
+    }
+    // A windscreen on the front piece.
+    if (r === 0) {
+      ctx.fillStyle = "rgba(20,16,16,0.75)";
+      const g = cell * 0.22;
+      if (forward === "right") ctx.fillRect(bx + bw - g * 1.6, by + bh * 0.18, g, bh * 0.64);
+      if (forward === "left") ctx.fillRect(bx + g * 0.6, by + bh * 0.18, g, bh * 0.64);
+      if (forward === "down") ctx.fillRect(bx + bw * 0.18, by + bh - g * 1.6, bw * 0.64, g);
+      if (forward === "up") ctx.fillRect(bx + bw * 0.18, by + g * 0.6, bw * 0.64, g);
+    }
+    ctx.strokeStyle = K.black;
+    ctx.lineWidth = Math.max(1, cell * 0.07);
+    roundRect(ctx, bx, by, bw, bh, cell * 0.18);
+    ctx.stroke();
+  });
 }
 
 /** Marks the cell the snake crashed into with a cross on a pale ring, readable without color. */
