@@ -26,7 +26,17 @@ export interface Progress {
   daily?: DailyProgress;
   /** The most cowries collected in one free play run, by world and edges. */
   free?: Record<string, number>;
+  /** The sound and vibration switches. Both start on. */
+  settings?: Settings;
 }
+
+export interface Settings {
+  sound: boolean;
+  vibration: boolean;
+}
+
+/** The sound and vibration switches, with both on until the player turns one off. */
+export const settingsOf = (progress: Progress): Settings => ({ sound: true, vibration: true, ...progress.settings });
 
 const KEY = "sankofa-snake/v1";
 

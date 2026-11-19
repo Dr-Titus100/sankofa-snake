@@ -32,7 +32,16 @@ Practice opens every level at a slower, steady speed. Running into something onl
 
 - Arrow keys or W, A, S and D steer. On a phone, swipe.
 - Space, P or Escape pauses. On a phone, tap the board.
+- M turns the sound off or on. The How to play screen has switches for sound and for vibration on phones that support it.
 - The game pauses on its own when you switch tabs or apps.
+
+## Sound and vibration
+
+Each event has a short sound: a cowrie, a power-up, a current, a crash and a cleared level. The notes are modeled on the gyil, a wooden xylophone from the Upper West of Ghana, and each cowrie in a run plays the next note up a five-note scale. The browser makes the sounds with the Web Audio API, so the game loads no sound files. On phones that support it, eating, crashing and clearing a level also give a short buzz.
+
+## Teaching
+
+The [teaching guides](docs/teaching/README.md) use the game's code to teach programming, with questions on paper, exercises at the keyboard and notes for the teacher. There are four lessons: the grid and how the snake moves, rules as functions, levels as data, and randomness and seeds.
 
 ## Where the code lives
 
@@ -41,6 +50,7 @@ packages/core/   the rules in TypeScript, with no drawing, and their unit tests
 levels/          one data file per level: size, edges, speed, goal and obstacles
 apps/web/        the canvas game, its styles and its browser tests
 scripts/         the build script
+docs/teaching/   lesson guides with exercises
 ```
 
 The rules and the drawing live in separate folders on purpose. `packages/core` decides where the snake goes, what it eats and when a run ends. `apps/web` only draws the board and reads the keyboard and touch screen. The same rules will run the phone apps later.
