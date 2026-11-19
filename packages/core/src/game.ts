@@ -4,7 +4,7 @@
 // Every function takes a game state and returns a new one. The old state is never changed, which
 // makes each move easy to test and easy to reason about.
 import { nextRandom } from "./rng";
-import { obstacleKeys } from "./levels";
+import { currentKeys, obstacleKeys } from "./levels";
 import type { Cell, Crash, Direction, GameEvent, GameState, LevelDef, PowerKind, VehicleDef } from "./types";
 
 const STEP: Record<Direction, Cell> = {
@@ -42,9 +42,11 @@ export function createGame(level: LevelDef, seed: number): GameState {
     level,
     snake,
     dir,
+    lastStep: dir,
     queue: [],
     food: null,
     obstacles: obstacleKeys(level),
+    currents: currentKeys(level),
     eaten: 0,
     score: 0,
     speed: level.speed.start,
@@ -70,6 +72,8 @@ export function turn(state: GameState, dir: Direction): GameState {
   if (state.status !== "ready" && state.status !== "running") return state;
   const last = state.queue.length ? state.queue[state.queue.length - 1] : state.dir;
   if (dir === OPPOSITE[last]) return state;
+  // After a current pushes the snake sideways, its neck is beside the head, so that way is blocked too.
+  if (!state.queue.length && dir === OPPOSITE[state.lastStep]) return state;
   const status = "running" as const;
   if (dir === last || state.queue.length >= MAX_QUEUED_TURNS) return { ...state, status };
   return { ...state, status, queue: [...state.queue, dir] };
@@ -98,13 +102,19 @@ export function speedNow(state: GameState): number {
 /** How long one move takes right now, in milliseconds. */
 export const moveMs = (state: GameState) => 1000 / speedNow(state);
 
-/** Moves the snake one cell and applies everything that follows from that move. */
+/**
+ * Moves the snake one cell and applies everything that follows from that move. When the head
+ * crosses a current, the current carries it one more cell sideways on the same move.
+ */
 export function tick(state: GameState): { state: GameState; events: GameEvent[] } {
   if (state.status !== "running") return { state, events: [] };
   const events: GameEvent[] = [];
   const level = state.level;
 
   const queue = [...state.queue];
+  // A turn pressed before a current pushed the snake may now point back into its neck. Drop it,
+  // the same way turn() ignores that press when it comes after the push.
+  while (queue.length && (queue[0] === OPPOSITE[state.lastStep] || queue[0] === OPPOSITE[state.dir])) queue.shift();
   const dir = queue.length ? (queue.shift() as Direction) : state.dir;
   // Vehicles move first, on the same beat as the snake, and wait while the snake is in their way.
   const moves = state.moves + 1;
@@ -115,29 +125,46 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
     powerUp = null;
     events.push({ type: "powerGone" });
   }
-  const moved: GameState = { ...state, moves, vehicles, powerUp };
-
-  const head = state.snake[0];
-  let next: Cell = { x: head.x + STEP[dir].x, y: head.y + STEP[dir].y };
   const elapsedMs = state.elapsedMs + moveMs(state);
+  const moved: GameState = { ...state, moves, vehicles, powerUp, queue, elapsedMs };
+
+  let next = moveOnce(moved, dir, dir, events, false);
+  const push = next.status === "running" ? next.currents.get(key(next.snake[0])) : undefined;
+  if (push && push !== dir && push !== OPPOSITE[dir]) {
+    events.push({ type: "current", dir: push });
+    next = moveOnce(next, push, dir, events, true);
+  }
+  return { state: next, events };
+}
+
+/**
+ * Moves the head one cell in the given direction, with the body following, and applies what
+ * happens there: a crash, a power-up, a cowrie, a speed-up or clearing the level. "heading" is the
+ * way the snake keeps going on the next move. It differs from "step" only when a current pushes.
+ */
+function moveOnce(state: GameState, step: Direction, heading: Direction, events: GameEvent[], pushed: boolean): GameState {
+  const level = state.level;
+  const head = state.snake[0];
+  let next: Cell = { x: head.x + STEP[step].x, y: head.y + STEP[step].y };
+  const fail = (cause: Crash, vehicle?: VehicleDef["kind"]) => crash(state, cause, next, heading, events, pushed, vehicle);
 
   const outside = next.x < 0 || next.y < 0 || next.x >= level.width || next.y >= level.height;
-  if (outside && level.edges === "walls") return crash(moved, "wall", next, dir, elapsedMs, events);
+  if (outside && level.edges === "walls") return fail("wall");
   next = wrapCell(next, level);
 
-  if (state.obstacles.has(key(next))) return crash(moved, "obstacle", next, dir, elapsedMs, events);
-  const vehicle = vehicleAt(level, vehicles, next);
-  if (vehicle) return crash(moved, "vehicle", next, dir, elapsedMs, events, vehicle);
+  if (state.obstacles.has(key(next))) return fail("obstacle");
+  const vehicle = vehicleAt(level, state.vehicles, next);
+  if (vehicle) return fail("vehicle", vehicle);
 
   const eating = state.food !== null && sameCell(next, state.food);
   // The tail moves out of its cell on this move unless the snake is growing,
   // so the head may safely move into the cell the tail is leaving.
   const tailMoves = !eating && state.grow === 0;
   const body = tailMoves ? state.snake.slice(0, -1) : state.snake;
-  let { passes } = state;
+  let { passes, powerUp } = state;
   if (body.some((c) => sameCell(c, next))) {
     // A pass power-up lets the snake through its own tail once.
-    if (passes === 0) return crash(moved, "self", next, dir, elapsedMs, events);
+    if (passes === 0) return fail("self");
     passes -= 1;
     events.push({ type: "passed" });
   }
@@ -147,7 +174,7 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
   if (!eating && grow > 0) grow -= 1;
 
   if (powerUp && sameCell(next, powerUp.at)) {
-    if (powerUp.kind === "slow") slowUntil = moves + SLOW_MOVES;
+    if (powerUp.kind === "slow") slowUntil = state.moves + SLOW_MOVES;
     if (powerUp.kind === "pass") passes += 1;
     if (powerUp.kind === "shrink") {
       snake = snake.slice(0, Math.max(MIN_LENGTH, snake.length - SHRINK_CELLS));
@@ -157,8 +184,8 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
     powerUp = null;
   }
 
-  let nextState: GameState = { ...moved, snake, dir, queue, grow, elapsedMs, powerUp, slowUntil, passes };
-  if (!eating) return { state: nextState, events };
+  let nextState: GameState = { ...state, snake, dir: heading, lastStep: step, grow, powerUp, slowUntil, passes };
+  if (!eating) return nextState;
 
   eaten += 1;
   const points = 10 * speedLevel;
@@ -166,11 +193,11 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
   events.push({ type: "ate", at: next, points });
 
   if (eaten >= level.goal) {
-    const timeBonus = Math.max(0, Math.round(level.parSeconds - elapsedMs / 1000)) * 5;
+    const timeBonus = Math.max(0, Math.round(level.parSeconds - state.elapsedMs / 1000)) * 5;
     score += timeBonus;
     const stars = starsFor(level, score);
     events.push({ type: "cleared", score, stars, timeBonus });
-    return { state: { ...nextState, eaten, score, food: null, status: "cleared" }, events };
+    return { ...nextState, eaten, score, food: null, status: "cleared" };
   }
 
   const s = level.speed;
@@ -186,7 +213,7 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
     nextState = placePowerUp(nextState);
     if (nextState.powerUp) events.push({ type: "powerAppeared", kind: nextState.powerUp.kind, at: nextState.powerUp.at });
   }
-  return { state: nextState, events };
+  return nextState;
 }
 
 /** One star for clearing the level, and one more for each score threshold reached. */
@@ -199,14 +226,15 @@ function crash(
   cause: Crash,
   at: Cell,
   dir: Direction,
-  elapsedMs: number,
   events: GameEvent[],
+  pushed: boolean,
   vehicle?: VehicleDef["kind"],
-): { state: GameState; events: GameEvent[] } {
+): GameState {
   events.push({ type: "crash", cause });
-  const over: GameState = { ...state, dir, queue: [], elapsedMs, status: "over", crash: cause, crashAt: at };
+  const over: GameState = { ...state, dir, queue: [], status: "over", crash: cause, crashAt: at };
   if (vehicle) over.crashVehicle = vehicle;
-  return { state: over, events };
+  if (pushed) over.crashPushed = true;
+  return over;
 }
 
 /**

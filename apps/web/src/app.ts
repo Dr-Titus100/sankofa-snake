@@ -26,6 +26,8 @@ const OBSTACLE_NAME: Record<string, string> = {
   city: "a building",
   lab: "a lab bench",
   maze: "a wall of the maze",
+  ocean: "a canoe",
+  village: "a loom",
 };
 
 /** What the screen reader says when the snake picks up each power-up. */
@@ -39,16 +41,14 @@ const POWER_NAME: Record<PowerKind, string> = { slow: "slow motion", shrink: "sh
 
 /** One sentence saying what ended the run. */
 function crashText(s: GameState): string {
-  switch (s.crash) {
-    case "wall":
-      return "The snake hit the wall.";
-    case "obstacle":
-      return `The snake ran into ${OBSTACLE_NAME[s.level.world] ?? "an obstacle"}.`;
-    case "vehicle":
-      return `The snake ran into a ${s.crashVehicle ?? "car"}.`;
-    default:
-      return "The snake ran into its own tail.";
-  }
+  const what = {
+    wall: "the wall",
+    obstacle: OBSTACLE_NAME[s.level.world] ?? "an obstacle",
+    vehicle: `a ${s.crashVehicle ?? "car"}`,
+    self: "its own tail",
+  }[s.crash ?? "self"];
+  if (s.crashPushed) return `A current pushed the snake into ${what}.`;
+  return s.crash === "wall" ? "The snake hit the wall." : `The snake ran into ${what}.`;
 }
 
 const starText = (n: number) => "★".repeat(n) + "☆".repeat(3 - n);
@@ -133,7 +133,8 @@ export class SankofaSnake {
         <li>Steer with the arrow keys or W, A, S and D. On a phone, swipe in the direction you want to go.</li>
         <li>Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.</li>
         <li>The run ends if the snake runs into its own tail, an obstacle or a vehicle. Vehicles stop for the snake, so cross the road in front of them or behind them. From the City on, the edge of the board is a wall too.</li>
-        <li>In the Lab and the Maze, power-ups appear on the board for a short time. The gold hourglass is slow motion, the red arrows shrink the snake, and the green loop lets the snake pass through its own tail once.</li>
+        <li>In the Ocean and the Weaving village, currents push the snake one square the way their arrows point when it swims across them. Swimming along a current does nothing.</li>
+        <li>In the Lab, the Maze and the Weaving village, power-ups appear on the board for a short time. The gold hourglass is slow motion, the red arrows shrink the snake, and the green loop lets the snake pass through its own tail once.</li>
         <li>Pause with Space, P or Escape, or tap the board on a phone. The game also pauses when you switch tabs.</li>
         <li>Clearing a level earns one star. A high score and a fast finish earn up to two more.</li>
       </ul>
@@ -164,7 +165,6 @@ export class SankofaSnake {
     el.innerHTML = `
       <h2 class="ss-heading">Levels</h2>
       <ul class="ss-cards">${cards}</ul>
-      <p class="ss-note">More worlds are on the way: the Ocean and the Weaving village.</p>
       <div class="ss-actions"><button class="ss-btn" data-go="title">Back</button></div>`;
     el.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((b) => {
       b.addEventListener("click", () => this.startLevel(Number(b.dataset.level)));
@@ -369,7 +369,7 @@ export class SankofaSnake {
         <p class="ss-overlay-title">Level cleared</p>
         <p class="ss-stars ss-big" aria-label="${stars} of 3 stars">${starText(stars)}</p>
         <p>Score ${s.score}, including a time bonus of ${timeBonus}.${best > stars ? ` Your best on this level is ${best} stars.` : ""}</p>
-        ${hasNext ? "" : `<p>You've cleared every level so far. More worlds are on the way.</p>`}
+        ${hasNext ? "" : `<p>You've cleared all nine levels.</p>`}
         <div class="ss-actions">
           ${hasNext ? `<button class="ss-btn ss-primary" data-next>Next level</button>` : ""}
           <button class="ss-btn${hasNext ? "" : " ss-primary"}" data-again>Play again</button>

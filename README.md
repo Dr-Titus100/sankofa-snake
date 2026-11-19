@@ -15,8 +15,10 @@ Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/g
 | 5 | Road | Trotros and taxis drive across the board. They stop for the snake, so only the snake's head can hit one. |
 | 6 | Lab | Power-ups appear for a short time. Slow motion slows the snake down, shrink makes it shorter, and a pass lets it through its own tail once. |
 | 7 | Maze | Narrow corridors with little room to turn. |
+| 8 | Ocean | Currents push the snake one square sideways when it swims across them. |
+| 9 | Weaving village | Every challenge at once: walls, looms, trotros, currents and power-ups, at top speed. |
 
-Eat 20 cowries to clear a level and open the next one. Clearing a level earns one star, and a high score with a fast finish earns up to two more. The Ocean and the Weaving village come next.
+Eat 20 cowries to clear a level and open the next one. Clearing a level earns one star, and a high score with a fast finish earns up to two more.
 
 ## Controls
 
@@ -35,7 +37,7 @@ scripts/         the build script
 
 The rules and the drawing live in separate folders on purpose. `packages/core` decides where the snake goes, what it eats and when a run ends. `apps/web` only draws the board and reads the keyboard and touch screen. The same rules will run the phone apps later.
 
-A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and the Road's trotros and taxis are listed under `vehicles` in `levels/05-road.json`, each with its lane, direction, length and speed. The Lab's `powerUps` setting says which power-ups can appear, how often and for how long. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
+A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and the Road's trotros and taxis are listed under `vehicles` in `levels/05-road.json`, each with its lane, direction, length and speed. Currents are the arrows `<`, `>`, `^` and `v` in the Ocean's map. The Lab's `powerUps` setting says which power-ups can appear, how often and for how long. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
 
 The cowries land in random places, but the random numbers come from a seed. The same seed always gives the same game, which the tests rely on and which a daily challenge will use later. Add `?seed=42` to the game's address to try it.
 

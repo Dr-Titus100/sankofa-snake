@@ -12,7 +12,7 @@ export interface Cell {
 export type Edges = "wrap" | "walls";
 
 /** The places a level can take place in. Each one has its own scenery in the web game. */
-export type World = "farm" | "park" | "market" | "city" | "road" | "lab" | "maze";
+export type World = "farm" | "park" | "market" | "city" | "road" | "lab" | "maze" | "ocean" | "village";
 
 /**
  * A vehicle that drives along one row or column of the board and comes back around at the far
@@ -90,7 +90,8 @@ export interface LevelDef {
   start: { x: number; y: number; dir: Direction; length: number };
   /**
    * The board as rows of text, one character per cell: "." is open ground and "#" is an obstacle.
-   * Leave it out for a board with no obstacles.
+   * "<", ">", "^" and "v" are currents. A current pushes the snake's head one cell the way its
+   * arrow points when the snake crosses it sideways. Leave the map out for an open board.
    */
   map?: string[];
   /** Vehicles driving across the board. Running the snake's head into one ends the run. */
@@ -107,13 +108,17 @@ export interface GameState {
   level: LevelDef;
   /** The snake's cells, head first. */
   snake: Cell[];
-  /** The direction of the last move. */
+  /** The way the snake is heading. */
   dir: Direction;
+  /** The direction of the last one-cell step. It differs from dir right after a current pushes the snake. */
+  lastStep: Direction;
   /** Turns the player pressed that haven't been used yet, oldest first. */
   queue: Direction[];
   food: Cell | null;
   /** Obstacle cells, as "x,y" keys for quick lookup. */
   obstacles: Set<string>;
+  /** Current cells, as "x,y" keys, with the way each current pushes. */
+  currents: Map<string, Direction>;
   eaten: number;
   score: number;
   /** Moves per second right now. */
@@ -139,6 +144,8 @@ export interface GameState {
   crash?: Crash;
   /** The kind of vehicle the snake ran into, when crash is "vehicle". */
   crashVehicle?: VehicleDef["kind"];
+  /** True when a current pushed the snake into whatever ended the run. */
+  crashPushed?: boolean;
   /** The cell the snake tried to move into when it crashed. */
   crashAt?: Cell;
   /** The random number generator's state, so a seed always gives the same cowrie spots. */
@@ -153,4 +160,5 @@ export type GameEvent =
   | { type: "powerAppeared"; kind: PowerKind; at: Cell }
   | { type: "powerGone" }
   | { type: "passed" }
+  | { type: "current"; dir: Direction }
   | { type: "cleared"; score: number; stars: number; timeBonus: number };

@@ -160,6 +160,28 @@ test.describe("on a computer", () => {
     await page.clock.runFor(800);
     await expect(page.locator("[data-overlay]").getByText("The snake ran into a wall of the maze.")).toBeVisible();
   });
+
+  test("in the Ocean, a current carries the snake past a canoe", async ({ page }) => {
+    await page.clock.install();
+    await openUpTo(page, ["farm", "park", "market", "city", "road", "lab", "maze"]);
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='7']").click();
+    // The head starts at column 5, row 10, heading up a column with a canoe in row 3. The current
+    // on row 5 pushes it one column right, so it misses the canoe and reaches the top wall instead.
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(1800);
+    await expect(page.locator("[data-overlay]").getByText("The snake hit the wall.")).toBeVisible();
+  });
+
+  test("the Weaving village says it has every challenge at once", async ({ page }) => {
+    await openUpTo(page, ["farm", "park", "market", "city", "road", "lab", "maze", "ocean"]);
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await expect(page.locator("[data-level='8']")).toBeEnabled();
+    await page.locator("[data-level='8']").click();
+    await expect(page.locator("[data-overlay]").getByText(/Every challenge at once/)).toBeVisible();
+  });
 });
 
 test.describe("on a phone", () => {
