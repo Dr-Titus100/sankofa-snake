@@ -396,6 +396,21 @@ describe("currents", () => {
     expect(turn(g, "right").queue).toEqual(["right"]);
   });
 
+  it("drops a queued turn that would go back into the neck after a push", () => {
+    // Heading right along row 4, the player presses up and then left before the snake reaches the
+    // current. Up crosses the current and gets pushed right, so the left turn would hit the neck.
+    const level = testLevel({ map, start: { x: 3, y: 4, dir: "right", length: 3 } });
+    let g = withFood(turn(createGame(level, 1), "right"), 0, 9);
+    g = turn(turn(g, "up"), "left");
+    expect(g.queue).toEqual(["up", "left"]);
+    g = tick(g).state;
+    expect(g.snake[0]).toEqual({ x: 4, y: 3 });
+    expect(g.queue).toEqual(["left"]);
+    g = tick(g).state;
+    expect(g.status).toBe("running");
+    expect(g.snake[0]).toEqual({ x: 4, y: 2 });
+  });
+
   it("can push the snake into a wall, and says so", () => {
     const level = testLevel({ map, edges: "walls", start: { x: 9, y: 6, dir: "up", length: 3 } });
     let g = withFood(turn(createGame(level, 1), "up"), 0, 9);

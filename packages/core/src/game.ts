@@ -112,6 +112,9 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
   const level = state.level;
 
   const queue = [...state.queue];
+  // A turn pressed before a current pushed the snake may now point back into its neck. Drop it,
+  // the same way turn() ignores that press when it comes after the push.
+  while (queue.length && (queue[0] === OPPOSITE[state.lastStep] || queue[0] === OPPOSITE[state.dir])) queue.shift();
   const dir = queue.length ? (queue.shift() as Direction) : state.dir;
   // Vehicles move first, on the same beat as the snake, and wait while the snake is in their way.
   const moves = state.moves + 1;
