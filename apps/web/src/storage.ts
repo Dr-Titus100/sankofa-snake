@@ -38,7 +38,10 @@ export interface Settings {
 /** The sound and vibration switches, with both on until the player turns one off. */
 export const settingsOf = (progress: Progress): Settings => ({ sound: true, vibration: true, ...progress.settings });
 
-const KEY = "sankofa-snake/v1";
+export const PROGRESS_KEY = "sankofa-snake/v1";
+const KEY = PROGRESS_KEY;
+/** Sent on window after progress is saved, so other copies of the game on the page can load it. */
+export const SAVED_EVENT = "sankofa-snake:saved";
 
 export function loadProgress(): Progress {
   try {
@@ -56,6 +59,7 @@ export function loadProgress(): Progress {
 export function saveProgress(progress: Progress): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(progress));
+    window.dispatchEvent(new Event(SAVED_EVENT));
   } catch {
     // Storage is blocked. Progress lasts until the page closes.
   }

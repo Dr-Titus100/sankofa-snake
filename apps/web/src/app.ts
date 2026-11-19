@@ -32,6 +32,8 @@ import {
   recordFree,
   recordRun,
   saveProgress,
+  PROGRESS_KEY,
+  SAVED_EVENT,
   settingsOf,
   type Progress,
   type Settings,
@@ -124,6 +126,13 @@ export class SankofaSnake {
     const settings = settingsOf(this.progress);
     this.sound = new Sound(settings.sound, settings.vibration);
     root.classList.add("ss-root");
+    // A page can hold more than one copy of the game, such as a play view and a help view, and a player
+    // can have the game open in two tabs. Each copy loads progress again whenever another one saves, so
+    // a stale copy never writes over newer scores or switches.
+    window.addEventListener(SAVED_EVENT, () => this.reload());
+    window.addEventListener("storage", (e) => {
+      if (e.key === null || e.key === PROGRESS_KEY) this.reload();
+    });
     if (options.view === "help") {
       // Only the rules and the switches. No board, so no keys or game listeners either.
       root.innerHTML = `
@@ -353,6 +362,15 @@ export class SankofaSnake {
     el.querySelectorAll<HTMLElement>("[data-go]").forEach((b) =>
       b.addEventListener("click", () => this.show(b.dataset.go as Screen)),
     );
+  }
+
+  /** Picks up progress and switches saved by another copy of the game. */
+  private reload() {
+    this.progress = loadProgress();
+    const settings = settingsOf(this.progress);
+    this.sound.soundOn = settings.sound;
+    this.sound.vibrationOn = settings.vibration;
+    this.syncSettings();
   }
 
   /** Turns sound or vibration off or on, saves the choice and updates every switch. */
