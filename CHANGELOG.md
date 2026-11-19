@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 (2026-11-19)
+
+- The button that leaves a run now says Back, whichever way you were playing.
+- On How to play, the Back button is a plain button and no longer starts out selected.
+- A page can show the game without its How to play button, with `data-sankofa-snake="play"`, and show only the rules and the sound and vibration switches, with `data-sankofa-snake="help"`. The website uses these to put How to play on a tab of its own.
+
 ## 0.6.0 (2026-11-19)
 
 - Sound: short wooden notes for cowries, power-ups, currents, crashes and cleared levels. Each cowrie in a run plays the next note up a five-note scale. The browser makes the sounds, so the game loads no sound files.

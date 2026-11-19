@@ -89,6 +89,12 @@ const starText = (n: number) => "★".repeat(n) + "☆".repeat(3 - n);
 export interface Options {
   /** A fixed seed puts the cowries in the same places every time. The tests use it. */
   seed?: number;
+  /**
+   * "full" is the whole game. "play" is the game without its How to play button, for a page that
+   * shows the rules on a tab of its own. "help" shows only the rules and the sound and vibration
+   * switches, for that tab.
+   */
+  view?: "full" | "play" | "help";
 }
 
 export class SankofaSnake {
@@ -118,6 +124,14 @@ export class SankofaSnake {
     const settings = settingsOf(this.progress);
     this.sound = new Sound(settings.sound, settings.vibration);
     root.classList.add("ss-root");
+    if (options.view === "help") {
+      // Only the rules and the switches. No board, so no keys or game listeners either.
+      root.innerHTML = `
+        <div class="ss-screen ss-help" data-screen="help"></div>
+        <p class="ss-sr" aria-live="polite" data-live></p>`;
+      this.renderHelp();
+      return;
+    }
     root.innerHTML = `
       <div class="ss-screen ss-title" data-screen="title"></div>
       <div class="ss-screen ss-levels" data-screen="levels" hidden></div>
@@ -163,7 +177,7 @@ export class SankofaSnake {
         <button class="ss-btn ss-primary" data-play data-focus>Play</button>
         <button class="ss-btn" data-go="daily">Daily challenge</button>
         <button class="ss-btn" data-levels>Choose a level</button>
-        <button class="ss-btn" data-go="help">How to play</button>
+        ${this.options.view === "play" ? "" : `<button class="ss-btn" data-go="help">How to play</button>`}
       </div>
       <p class="ss-note">Sankofa is an Akan word from Ghana. It means "go back and get it."</p>`;
     el.querySelector("[data-play]")!.addEventListener("click", () => this.startRun("levels", this.nextLevelIndex()));
@@ -176,8 +190,9 @@ export class SankofaSnake {
 
   private renderHelp() {
     const el = this.part("help");
+    const alone = this.options.view === "help";
     el.innerHTML = `
-      <h2 class="ss-heading">How to play</h2>
+      ${alone ? "" : `<h2 class="ss-heading" tabindex="-1" data-focus>How to play</h2>`}
       <ul class="ss-list">
         <li>Steer with the arrow keys or W, A, S and D. On a phone, swipe in the direction you want to go.</li>
         <li>Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.</li>
@@ -197,7 +212,7 @@ export class SankofaSnake {
         ${Sound.canVibrate ? `<button class="ss-tab" data-setting="vibration">Vibration</button>` : ""}
       </div>
       <p class="ss-note ss-intro">Gold means on. ${Sound.canVibrate ? "Vibration works on most Android phones." : ""}</p>
-      <div class="ss-actions"><button class="ss-btn ss-primary" data-go="title" data-focus>Back</button></div>`;
+      ${alone ? "" : `<div class="ss-actions"><button class="ss-btn" data-go="title">Back</button></div>`}`;
     el.querySelectorAll<HTMLButtonElement>("[data-setting]").forEach((b) => {
       b.addEventListener("click", () => this.toggleSetting(b.dataset.setting as keyof Settings));
     });
@@ -314,7 +329,7 @@ export class SankofaSnake {
       <div class="ss-actions ss-bar">
         <button class="ss-btn" data-pause>Pause</button>
         <button class="ss-btn ss-toggle" data-setting="sound">Sound</button>
-        <button class="ss-btn" data-back>Levels</button>
+        <button class="ss-btn" data-back>Back</button>
       </div>
       <p class="ss-note ss-hint">Arrow keys or W, A, S and D to steer. Space to pause and M for sound. On a phone, swipe to steer and tap the board to pause.</p>`;
     this.canvas = el.querySelector("canvas")!;
@@ -363,10 +378,6 @@ export class SankofaSnake {
   /** Leaves a run for the screen it was started from. */
   private back() {
     this.show(this.mode === "daily" ? "daily" : "levels");
-  }
-
-  private backLabel() {
-    return this.mode === "daily" ? "Daily challenge" : this.mode === "levels" ? "Levels" : this.mode === "free" ? "Free play" : "Practice";
   }
 
   private freeKey(level: LevelDef) {
@@ -419,7 +430,6 @@ export class SankofaSnake {
     this.say(`${this.runTitle()}. ${level.challenge} Press an arrow key or swipe to start.`);
     // The power-up line keeps its space on levels with power-ups, so the board doesn't jump.
     this.part("game").querySelector<HTMLElement>('[data-hud="power"]')!.hidden = !level.powerUps;
-    this.part("game").querySelector<HTMLElement>("[data-back]")!.textContent = this.backLabel();
     this.updateHud();
     this.updateOverlay();
     this.resize();
@@ -546,7 +556,7 @@ export class SankofaSnake {
     const level = s.level;
     const mode = this.mode;
     const hasNext = mode === "levels" && this.levelIndex < LEVELS.length - 1;
-    const back = `<button class="ss-btn" data-back>${this.backLabel()}</button>`;
+    const back = `<button class="ss-btn" data-back>Back</button>`;
     let html = "";
     if (s.status === "ready" && s.bump) {
       html = `
