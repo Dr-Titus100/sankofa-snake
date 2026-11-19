@@ -98,4 +98,20 @@ describe("practice", () => {
     expect(g.bump).toBeUndefined();
     expect(g.snake[0]).toEqual({ x: 6, y: 0 });
   });
+
+  it("lets the snake turn back the way it came from after bumping on a turn", () => {
+    // Up to the top wall, one step right along it, then a turn up into the wall again.
+    let g = turn(createGame(practiceLevel(LEVELS[3]), 1), "up");
+    for (let i = 0; i < 11; i++) g = tick(g).state;
+    g = tick(turn(g, "right")).state;
+    g = tick(turn(g, "up")).state;
+    expect(g.bump).toBe("wall");
+    expect(g.snake[0]).toEqual({ x: 6, y: 0 });
+    // The snake never moved up, so down leads away from the wall and away from its neck.
+    g = turn(g, "down");
+    expect(g.status).toBe("running");
+    g = tick(g).state;
+    expect(g.bump).toBeUndefined();
+    expect(g.snake[0]).toEqual({ x: 6, y: 1 });
+  });
 });

@@ -232,8 +232,9 @@ function crash(
 ): GameState {
   if (state.level.practice) {
     // In practice the snake stops in front of what it ran into and waits for a new direction.
+    // It keeps the heading of its last real step, since it never moved the way that was blocked.
     events.push({ type: "bump", cause });
-    return { ...state, dir, queue: [], status: "ready", bump: cause };
+    return { ...state, dir: state.lastStep, queue: [], status: "ready", bump: cause };
   }
   events.push({ type: "crash", cause });
   const over: GameState = { ...state, dir, queue: [], status: "over", crash: cause, crashAt: at };
