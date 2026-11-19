@@ -5,6 +5,7 @@
 - Before you start, bring `dev` up to date with `main`.
 - `main` takes changes only through a pull request from `dev`. Titus reviews and merges it.
 - Never force-push. If `main` has moved, merge `main` into `dev` and push `dev`.
+- Make commits as Titus, so GitHub lists him as a contributor: run `git config user.name "Titus Nyarko Nde"` and `git config user.email "56065571+Dr-Titus100@users.noreply.github.com"` in the clone first. Claude goes in the commit message as a co-author.
 
 ## Releases
 - A release comes from `main` after the pull request merges. Run the Release workflow by hand with the new tag (for example `v0.1.2`), or push the tag.
