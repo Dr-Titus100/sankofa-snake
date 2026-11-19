@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   LEVELS,
   createGame,
+  SHRINK_CELLS,
+  SLOW_MOVES,
   key,
+  moveMs,
   placeFood,
+  speedNow,
   starsFor,
   tick,
   togglePause,
@@ -12,6 +16,7 @@ import {
   vehicleCells,
   type GameState,
   type LevelDef,
+  type PowerKind,
 } from "../src";
 
 const farm = LEVELS[0];
@@ -272,6 +277,90 @@ describe("vehicles", () => {
 
   it("catches a snake that starts on a lane", () => {
     expect(validateLevel(testLevel({ vehicles: [{ ...taxi, lane: 5 }] }))).toContain("start cell 4,5 is on a vehicle's lane");
+  });
+});
+
+describe("power-ups", () => {
+  const rule = { kinds: ["slow", "shrink", "pass"] as PowerKind[], every: 2, lasts: 10 };
+
+  function withPower(state: GameState, kind: PowerKind, x: number, y: number): GameState {
+    return { ...state, powerUp: { kind, at: { x, y }, until: state.moves + 50 } };
+  }
+
+  it("appears after every few cowries, away from the snake and the cowrie", () => {
+    const level = testLevel({ goal: 50, powerUps: rule });
+    let g = turn(createGame(level, 3), "right");
+    let head = g.snake[0];
+    g = tick(withFood(g, head.x + 1, head.y)).state;
+    expect(g.powerUp).toBeNull();
+    head = g.snake[0];
+    const { state, events } = tick(withFood(g, head.x + 1, head.y));
+    expect(state.powerUp).not.toBeNull();
+    expect(events).toContainEqual({ type: "powerAppeared", kind: state.powerUp!.kind, at: state.powerUp!.at });
+    const k = key(state.powerUp!.at);
+    expect(state.snake.some((c) => key(c) === k)).toBe(false);
+    expect(key(state.food!)).not.toBe(k);
+  });
+
+  it("goes away when the snake doesn't reach it in time", () => {
+    let g = withFood(turn(createGame(testLevel({ powerUps: rule }), 1), "right"), 0, 0);
+    g = { ...g, powerUp: { kind: "slow", at: { x: 0, y: 9 }, until: 3 } };
+    expect(run(g, 2).powerUp).not.toBeNull();
+    const { state, events } = tick(run(g, 2));
+    expect(state.powerUp).toBeNull();
+    expect(events).toContainEqual({ type: "powerGone" });
+  });
+
+  it("slows the snake down for a while with slow motion", () => {
+    const level = testLevel({ speed: { start: 10, step: 0, every: 5, max: 10 } });
+    let g = withPower(withFood(turn(createGame(level, 1), "right"), 0, 0), "slow", 5, 5);
+    g = tick(g).state;
+    expect(speedNow(g)).toBe(6);
+    expect(moveMs(g)).toBeCloseTo(1000 / 6);
+    g = run(g, SLOW_MOVES - 1);
+    expect(speedNow(g)).toBe(6);
+    g = run(g, 1);
+    expect(speedNow(g)).toBe(10);
+  });
+
+  it("takes cells off the tail with shrink, but never below three cells", () => {
+    const long = testLevel({ start: { x: 8, y: 5, dir: "right", length: 8 } });
+    let g = withPower(withFood(turn(createGame(long, 1), "right"), 0, 0), "shrink", 9, 5);
+    g = tick(g).state;
+    expect(g.snake).toHaveLength(8 - SHRINK_CELLS);
+    g = withPower(g, "shrink", (g.snake[0].x + 1) % 10, 5);
+    g = tick(g).state;
+    expect(g.snake).toHaveLength(3);
+  });
+
+  it("lets the snake through its own tail once with a pass", () => {
+    // A snake of 5 cells turning in a tight square runs into itself, as in the crash test above.
+    const level = testLevel({ start: { x: 4, y: 5, dir: "right", length: 5 } });
+    let g = withPower(withFood(createGame(level, 1), 0, 0), "pass", 5, 5);
+    g = tick(turn(g, "right")).state;
+    expect(g.passes).toBe(1);
+    const events = [];
+    for (const d of ["down", "left", "up"] as const) {
+      const r = tick(turn(g, d));
+      events.push(...r.events);
+      g = r.state;
+    }
+    expect(g.status).toBe("running");
+    expect(g.passes).toBe(0);
+    expect(events).toContainEqual({ type: "passed" });
+    // Without a pass left, the next turn back into the body ends the run.
+    for (const d of ["right", "down", "left", "up"] as const) g = tick(turn(g, d)).state;
+    expect(g.status).toBe("over");
+    expect(g.crash).toBe("self");
+  });
+
+  it("catches power-up settings that don't make sense", () => {
+    const bad = testLevel({ powerUps: { kinds: ["fly" as PowerKind], every: 0, lasts: 0 } });
+    expect(validateLevel(bad)).toEqual([
+      'power-up kinds must be some of "slow", "shrink" and "pass"',
+      "power-ups must appear every 1 or more cowries",
+      "power-ups must last 1 or more moves",
+    ]);
   });
 });
 

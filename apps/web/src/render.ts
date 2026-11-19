@@ -1,7 +1,17 @@
-// Draws the board on a canvas: the kente frame, the scenery of each world, the market stalls and
-// city buildings, the roads and their vehicles, the cowrie and the snake made of woven blocks.
+// Draws the board on a canvas: the kente frame, the scenery of each world, the market stalls,
+// city buildings, lab benches and maze walls, the roads and their vehicles, the power-ups, the
+// cowrie and the snake made of woven blocks.
 // Nothing here changes the game.
-import { vehicleCells, type Cell, type Direction, type GameState, type LevelDef, type VehicleDef } from "../../../packages/core/src";
+import {
+  isSlow,
+  vehicleCells,
+  type Cell,
+  type Direction,
+  type GameState,
+  type LevelDef,
+  type PowerUp,
+  type VehicleDef,
+} from "../../../packages/core/src";
 import { KENTE as K } from "./logo";
 
 interface World {
@@ -97,11 +107,43 @@ const WORLDS: Record<LevelDef["world"], World> = {
       }
     },
   },
+  lab: {
+    ground: "#15252B",
+    detail(ctx, x, y, s, cx, cy) {
+      // Large floor tiles, two cells to a tile.
+      ctx.strokeStyle = "rgba(247,238,220,0.06)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (cx % 2 === 0) {
+        ctx.moveTo(x + 0.5, y);
+        ctx.lineTo(x + 0.5, y + s);
+      }
+      if (cy % 2 === 0) {
+        ctx.moveTo(x, y + 0.5);
+        ctx.lineTo(x + s, y + 0.5);
+      }
+      ctx.stroke();
+    },
+  },
+  maze: {
+    ground: "#2A2412",
+    detail(ctx, x, y, s, cx, cy) {
+      // A packed earth path with a few footprints of sand.
+      if (cellHash(cx, cy) % 9 === 4) {
+        ctx.fillStyle = "rgba(242,183,5,0.1)";
+        ctx.beginPath();
+        ctx.ellipse(x + s * 0.4, y + s * 0.55, s * 0.12, s * 0.07, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+  },
 };
 
 /** How each world draws its obstacles. */
 const OBSTACLES: Partial<Record<LevelDef["world"], typeof drawStall>> = {
   city: drawBuilding,
+  lab: drawBench,
+  maze: drawReedWall,
 };
 
 export interface Layout {
@@ -155,6 +197,8 @@ export function draw(ctx: CanvasRenderingContext2D, state: GameState, layout: La
     drawObstacle(ctx, frame + cx * cell, frame + cy * cell, cell, state.obstacles.has(`${cx},${cy - 1}`), cx, cy);
   }
 
+  if (state.powerUp) drawPowerUp(ctx, state.powerUp, state.moves, layout, time, still);
+
   if (state.food) {
     const pulse = still ? 1 : 1 + 0.06 * Math.sin(time / 220);
     drawCowrie(ctx, frame + state.food.x * cell, frame + state.food.y * cell, cell, pulse);
@@ -168,9 +212,27 @@ export function draw(ctx: CanvasRenderingContext2D, state: GameState, layout: La
     if (i === 0) drawHead(ctx, x, y, cell, state.dir);
     else drawWoven(ctx, x, y, cell, i % 2);
   }
+  // A green ring round the head while the snake has a pass through its own tail.
+  if (state.passes > 0 && state.status !== "over") {
+    const h = state.snake[0];
+    ctx.strokeStyle = K.green;
+    ctx.lineWidth = Math.max(2, cell * 0.1);
+    ctx.setLineDash([cell * 0.18, cell * 0.12]);
+    ctx.beginPath();
+    ctx.arc(frame + (h.x + 0.5) * cell, frame + (h.y + 0.5) * cell, cell * 0.62, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
   // Vehicles go on top of everything else on the board, so a collision is easy to see.
   level.vehicles?.forEach((v, i) => drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout));
+
+  // In slow motion the board gets a pale gold veil at its edges.
+  if (isSlow(state) && state.status !== "over") {
+    ctx.strokeStyle = "rgba(242,183,5,0.35)";
+    ctx.lineWidth = cell * 0.5;
+    ctx.strokeRect(frame + cell * 0.25, frame + cell * 0.25, size - frame * 2 - cell * 0.5, size - frame * 2 - cell * 0.5);
+  }
 
   if (state.status === "over" && state.crashAt) drawCrash(ctx, state.crashAt, layout);
 }
@@ -521,4 +583,102 @@ function drawCrash(ctx: CanvasRenderingContext2D, at: Cell, layout: Layout) {
   ctx.moveTo(cx + r * 0.5, cy - r * 0.5);
   ctx.lineTo(cx - r * 0.5, cy + r * 0.5);
   ctx.stroke();
+}
+
+/** A lab bench seen from above: a pale worktop with a flask or test tubes in kente colors. */
+function drawBench(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, _backRow: boolean, cx = 0, cy = 0) {
+  const pad = s * 0.04;
+  ctx.fillStyle = "#C9C2B4";
+  ctx.fillRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+  ctx.strokeStyle = K.black;
+  ctx.lineWidth = Math.max(1, s * 0.06);
+  ctx.strokeRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+  const h = cellHash(cx, cy);
+  const colors = [K.green, K.red, K.gold];
+  if (h % 2 === 0) {
+    // A round flask.
+    ctx.fillStyle = colors[h % 3];
+    ctx.beginPath();
+    ctx.arc(x + s * 0.5, y + s * 0.56, s * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, s * 0.05);
+    ctx.stroke();
+    ctx.fillStyle = K.cream;
+    ctx.fillRect(x + s * 0.44, y + s * 0.16, s * 0.12, s * 0.2);
+    ctx.strokeRect(x + s * 0.44, y + s * 0.16, s * 0.12, s * 0.2);
+  } else {
+    // A rack of three test tubes.
+    colors.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x + s * (0.2 + i * 0.22), y + s * 0.2, s * 0.14, s * 0.6);
+      ctx.lineWidth = Math.max(1, s * 0.04);
+      ctx.strokeRect(x + s * (0.2 + i * 0.22), y + s * 0.2, s * 0.14, s * 0.6);
+    });
+  }
+}
+
+/** A maze wall made of woven reeds: gold and brown strands in a basket weave. */
+function drawReedWall(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, _backRow: boolean, cx = 0, cy = 0) {
+  ctx.fillStyle = "#8A6420";
+  ctx.fillRect(x, y, s, s);
+  const flip = (cx + cy) % 2 === 0;
+  ctx.fillStyle = "#C8962A";
+  for (let i = 0; i < 3; i++) {
+    if (flip) ctx.fillRect(x + s * (0.06 + i * 0.32), y + s * 0.06, s * 0.24, s * 0.88);
+    else ctx.fillRect(x + s * 0.06, y + s * (0.06 + i * 0.32), s * 0.88, s * 0.24);
+  }
+  ctx.strokeStyle = "rgba(20,16,16,0.6)";
+  ctx.lineWidth = Math.max(1, s * 0.04);
+  ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+}
+
+/**
+ * A power-up: a cream disc with a black ring and an icon. Slow motion is a gold hourglass, shrink
+ * is two red arrows pointing in, and a pass is a green loop. It blinks when it is about to go.
+ */
+function drawPowerUp(ctx: CanvasRenderingContext2D, p: PowerUp, moves: number, layout: Layout, time: number, still: boolean) {
+  const { frame, cell } = layout;
+  if (!still && p.until - moves <= 12 && Math.floor(time / 180) % 2 === 0) return;
+  const cx = frame + (p.at.x + 0.5) * cell;
+  const cy = frame + (p.at.y + 0.5) * cell;
+  const r = cell * 0.44;
+  ctx.fillStyle = K.cream;
+  ctx.strokeStyle = K.black;
+  ctx.lineWidth = Math.max(1.5, cell * 0.08);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineWidth = Math.max(1, cell * 0.06);
+  if (p.kind === "slow") {
+    ctx.fillStyle = K.gold;
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.45, cy - r * 0.55);
+    ctx.lineTo(cx + r * 0.45, cy - r * 0.55);
+    ctx.lineTo(cx - r * 0.45, cy + r * 0.55);
+    ctx.lineTo(cx + r * 0.45, cy + r * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (p.kind === "shrink") {
+    ctx.strokeStyle = K.red;
+    ctx.lineWidth = Math.max(1.5, cell * 0.09);
+    ctx.beginPath();
+    for (const d of [-1, 1]) {
+      ctx.moveTo(cx + d * r * 0.7, cy);
+      ctx.lineTo(cx + d * r * 0.12, cy);
+      ctx.moveTo(cx + d * r * 0.36, cy - r * 0.26);
+      ctx.lineTo(cx + d * r * 0.12, cy);
+      ctx.lineTo(cx + d * r * 0.36, cy + r * 0.26);
+    }
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = K.green;
+    ctx.lineWidth = Math.max(1.5, cell * 0.1);
+    ctx.beginPath();
+    ctx.ellipse(cx - r * 0.22, cy, r * 0.3, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.moveTo(cx + r * 0.38, cy);
+    ctx.ellipse(cx + r * 0.22, cy, r * 0.3, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }

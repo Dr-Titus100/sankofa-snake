@@ -12,7 +12,7 @@ export interface Cell {
 export type Edges = "wrap" | "walls";
 
 /** The places a level can take place in. Each one has its own scenery in the web game. */
-export type World = "farm" | "park" | "market" | "city" | "road";
+export type World = "farm" | "park" | "market" | "city" | "road" | "lab" | "maze";
 
 /**
  * A vehicle that drives along one row or column of the board and comes back around at the far
@@ -33,6 +33,30 @@ export interface VehicleDef {
   every: number;
   /** Where the front of the vehicle starts along its lane. */
   start: number;
+}
+
+/**
+ * The power-ups. "slow" slows the snake down for a while, "shrink" takes a few cells off the tail,
+ * and "pass" lets the snake pass through its own tail once.
+ */
+export type PowerKind = "slow" | "shrink" | "pass";
+
+/** When power-ups appear on a level and how long each one stays. */
+export interface PowerUpRule {
+  /** The kinds that can appear. Each time one appears, it is picked at random from this list. */
+  kinds: PowerKind[];
+  /** A power-up appears after every this many cowries. */
+  every: number;
+  /** A power-up the snake doesn't reach within this many moves goes away. */
+  lasts: number;
+}
+
+/** A power-up lying on the board. */
+export interface PowerUp {
+  kind: PowerKind;
+  at: Cell;
+  /** It goes away when the move count reaches this number. */
+  until: number;
 }
 
 /** One level, as written in a file in the levels/ folder. */
@@ -71,6 +95,8 @@ export interface LevelDef {
   map?: string[];
   /** Vehicles driving across the board. Running the snake's head into one ends the run. */
   vehicles?: VehicleDef[];
+  /** Power-ups that appear while the snake eats. Leave it out for a level with none. */
+  powerUps?: PowerUpRule;
 }
 
 export type Status = "ready" | "running" | "paused" | "over" | "cleared";
@@ -102,6 +128,12 @@ export interface GameState {
   moves: number;
   /** Where the front of each vehicle is along its lane, in the order of level.vehicles. */
   vehicles: number[];
+  /** The power-up on the board, or null when there is none. */
+  powerUp: PowerUp | null;
+  /** The snake moves slowly until the move count reaches this number. */
+  slowUntil: number;
+  /** How many more times the snake can pass through its own tail. */
+  passes: number;
   status: Status;
   /** What ended the run, when status is "over". */
   crash?: Crash;
@@ -117,4 +149,8 @@ export type GameEvent =
   | { type: "ate"; at: Cell; points: number }
   | { type: "speedup"; speed: number }
   | { type: "crash"; cause: Crash }
+  | { type: "power"; kind: PowerKind }
+  | { type: "powerAppeared"; kind: PowerKind; at: Cell }
+  | { type: "powerGone" }
+  | { type: "passed" }
   | { type: "cleared"; score: number; stars: number; timeBonus: number };

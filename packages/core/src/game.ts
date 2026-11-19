@@ -5,7 +5,7 @@
 // makes each move easy to test and easy to reason about.
 import { nextRandom } from "./rng";
 import { obstacleKeys } from "./levels";
-import type { Cell, Crash, Direction, GameEvent, GameState, LevelDef, VehicleDef } from "./types";
+import type { Cell, Crash, Direction, GameEvent, GameState, LevelDef, PowerKind, VehicleDef } from "./types";
 
 const STEP: Record<Direction, Cell> = {
   up: { x: 0, y: -1 },
@@ -18,6 +18,16 @@ const OPPOSITE: Record<Direction, Direction> = { up: "down", down: "up", left: "
 
 /** The most turns a player can press ahead of the snake. */
 export const MAX_QUEUED_TURNS = 2;
+
+/** How many moves slow motion lasts. */
+export const SLOW_MOVES = 40;
+/** In slow motion the snake moves at this share of its speed, and never slower than MIN_SPEED. */
+const SLOW_SHARE = 0.6;
+const MIN_SPEED = 3;
+/** How many cells the shrink power-up takes off the tail. */
+export const SHRINK_CELLS = 4;
+/** Shrinking never makes the snake shorter than this. */
+const MIN_LENGTH = 3;
 
 export const key = (c: Cell) => `${c.x},${c.y}`;
 export const sameCell = (a: Cell, b: Cell) => a.x === b.x && a.y === b.y;
@@ -43,6 +53,9 @@ export function createGame(level: LevelDef, seed: number): GameState {
     elapsedMs: 0,
     moves: 0,
     vehicles: (level.vehicles ?? []).map((v) => v.start),
+    powerUp: null,
+    slowUntil: 0,
+    passes: 0,
     status: "ready",
     rng: seed >>> 0,
   };
@@ -74,8 +87,16 @@ export function pause(state: GameState): GameState {
   return state.status === "running" ? { ...state, status: "paused" } : state;
 }
 
+/** Whether slow motion is on right now. */
+export const isSlow = (state: GameState) => state.moves < state.slowUntil;
+
+/** Moves per second right now, counting slow motion. */
+export function speedNow(state: GameState): number {
+  return isSlow(state) ? Math.max(MIN_SPEED, Math.round(state.speed * SLOW_SHARE)) : state.speed;
+}
+
 /** How long one move takes right now, in milliseconds. */
-export const moveMs = (state: GameState) => 1000 / state.speed;
+export const moveMs = (state: GameState) => 1000 / speedNow(state);
 
 /** Moves the snake one cell and applies everything that follows from that move. */
 export function tick(state: GameState): { state: GameState; events: GameEvent[] } {
@@ -88,7 +109,13 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
   // Vehicles move first, on the same beat as the snake, and wait while the snake is in their way.
   const moves = state.moves + 1;
   const vehicles = moveVehicles(level, state.vehicles, moves, state.snake);
-  const moved: GameState = { ...state, moves, vehicles };
+  // A power-up the snake didn't reach in time goes away.
+  let powerUp = state.powerUp;
+  if (powerUp && moves >= powerUp.until) {
+    powerUp = null;
+    events.push({ type: "powerGone" });
+  }
+  const moved: GameState = { ...state, moves, vehicles, powerUp };
 
   const head = state.snake[0];
   let next: Cell = { x: head.x + STEP[dir].x, y: head.y + STEP[dir].y };
@@ -107,13 +134,30 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
   // so the head may safely move into the cell the tail is leaving.
   const tailMoves = !eating && state.grow === 0;
   const body = tailMoves ? state.snake.slice(0, -1) : state.snake;
-  if (body.some((c) => sameCell(c, next))) return crash(moved, "self", next, dir, elapsedMs, events);
+  let { passes } = state;
+  if (body.some((c) => sameCell(c, next))) {
+    // A pass power-up lets the snake through its own tail once.
+    if (passes === 0) return crash(moved, "self", next, dir, elapsedMs, events);
+    passes -= 1;
+    events.push({ type: "passed" });
+  }
 
-  const snake = [next, ...body];
-  let { grow, eaten, score, speed, speedLevel } = state;
+  let snake = [next, ...body];
+  let { grow, eaten, score, speed, speedLevel, slowUntil } = state;
   if (!eating && grow > 0) grow -= 1;
 
-  let nextState: GameState = { ...moved, snake, dir, queue, grow, elapsedMs };
+  if (powerUp && sameCell(next, powerUp.at)) {
+    if (powerUp.kind === "slow") slowUntil = moves + SLOW_MOVES;
+    if (powerUp.kind === "pass") passes += 1;
+    if (powerUp.kind === "shrink") {
+      snake = snake.slice(0, Math.max(MIN_LENGTH, snake.length - SHRINK_CELLS));
+      grow = 0;
+    }
+    events.push({ type: "power", kind: powerUp.kind });
+    powerUp = null;
+  }
+
+  let nextState: GameState = { ...moved, snake, dir, queue, grow, elapsedMs, powerUp, slowUntil, passes };
   if (!eating) return { state: nextState, events };
 
   eaten += 1;
@@ -136,8 +180,13 @@ export function tick(state: GameState): { state: GameState; events: GameEvent[] 
     events.push({ type: "speedup", speed });
   }
 
-  nextState = { ...nextState, eaten, score, speed, speedLevel };
-  return { state: placeFood(nextState), events };
+  nextState = placeFood({ ...nextState, eaten, score, speed, speedLevel });
+  const rule = level.powerUps;
+  if (rule && rule.kinds.length && eaten % rule.every === 0 && !nextState.powerUp) {
+    nextState = placePowerUp(nextState);
+    if (nextState.powerUp) events.push({ type: "powerAppeared", kind: nextState.powerUp.kind, at: nextState.powerUp.at });
+  }
+  return { state: nextState, events };
 }
 
 /** One star for clearing the level, and one more for each score threshold reached. */
@@ -221,10 +270,12 @@ function wrapCell(c: Cell, level: LevelDef): Cell {
   };
 }
 
-/** Puts a cowrie on a random open cell, never on the snake, an obstacle or a vehicle. */
-export function placeFood(state: GameState): GameState {
+/** The cells where a cowrie or a power-up may go: not on the snake, an obstacle, a vehicle or each other. */
+function openCells(state: GameState): Cell[] {
   const taken = new Set(state.snake.map(key));
   for (const k of vehicleKeys(state)) taken.add(k);
+  if (state.food) taken.add(key(state.food));
+  if (state.powerUp) taken.add(key(state.powerUp.at));
   const open: Cell[] = [];
   for (let y = 0; y < state.level.height; y++) {
     for (let x = 0; x < state.level.width; x++) {
@@ -232,7 +283,29 @@ export function placeFood(state: GameState): GameState {
       if (!taken.has(k) && !state.obstacles.has(k)) open.push({ x, y });
     }
   }
+  return open;
+}
+
+/** Puts a cowrie on a random open cell. */
+export function placeFood(state: GameState): GameState {
+  const open = openCells({ ...state, food: null });
   if (open.length === 0) return { ...state, food: null };
   const [r, rng] = nextRandom(state.rng);
   return { ...state, food: open[Math.floor(r * open.length)], rng };
+}
+
+/** Puts a power-up of a random kind from the level's list on a random open cell. */
+export function placePowerUp(state: GameState, kind?: PowerKind): GameState {
+  const rule = state.level.powerUps;
+  if (!rule || !rule.kinds.length) return state;
+  let rng = state.rng;
+  if (!kind) {
+    const [r, next] = nextRandom(rng);
+    rng = next;
+    kind = rule.kinds[Math.floor(r * rule.kinds.length)];
+  }
+  const open = openCells({ ...state, powerUp: null });
+  if (open.length === 0) return { ...state, rng };
+  const [r, next] = nextRandom(rng);
+  return { ...state, powerUp: { kind, at: open[Math.floor(r * open.length)], until: state.moves + rule.lasts }, rng: next };
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 (2026-11-19)
+
+- Level 6, Lab: power-ups appear on the board for a short time. Slow motion (a gold hourglass) slows the snake down for 40 moves, shrink (red arrows) takes four cells off the tail, and a pass (a green loop) lets the snake through its own tail once.
+- Level 7, Maze: narrow corridors between walls of woven reeds, with power-ups to help.
+- A line under the score shows how much slow motion is left and whether the snake has a pass.
+- Screen readers hear when a power-up appears and what it does when the snake picks it up.
+
 ## 0.2.0 (2026-11-19)
 
 - Level 4, City: the edge of the board is a solid wall, and buildings stand in blocks with streets between them.

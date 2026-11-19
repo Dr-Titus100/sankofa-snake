@@ -6,9 +6,11 @@ import park from "../../../levels/02-park.json";
 import market from "../../../levels/03-market.json";
 import city from "../../../levels/04-city.json";
 import road from "../../../levels/05-road.json";
+import lab from "../../../levels/06-lab.json";
+import maze from "../../../levels/07-maze.json";
 import type { LevelDef } from "./types";
 
-export const LEVELS: LevelDef[] = [farm, park, market, city, road] as LevelDef[];
+export const LEVELS: LevelDef[] = [farm, park, market, city, road, lab, maze] as LevelDef[];
 
 /** The obstacle cells of a level, as "x,y" keys. */
 export function obstacleKeys(level: LevelDef): Set<string> {
@@ -57,6 +59,15 @@ export function validateLevel(level: LevelDef): string[] {
       if (obstacles.has(cell)) problems.push(`vehicle ${i} drives through the obstacle at ${cell}`);
     }
   });
+
+  const p = level.powerUps;
+  if (p) {
+    if (!p.kinds.length || p.kinds.some((k) => !["slow", "shrink", "pass"].includes(k))) {
+      problems.push(`power-up kinds must be some of "slow", "shrink" and "pass"`);
+    }
+    if (!Number.isInteger(p.every) || p.every < 1) problems.push("power-ups must appear every 1 or more cowries");
+    if (!Number.isInteger(p.lasts) || p.lasts < 1) problems.push("power-ups must last 1 or more moves");
+  }
 
   // The snake's starting cells must be on open ground, inside the board and off every road.
   const back = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[start.dir];
