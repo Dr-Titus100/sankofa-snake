@@ -138,6 +138,28 @@ test.describe("on a computer", () => {
     await page.clock.runFor(700);
     await expect(page.locator("[data-overlay]").getByText("The snake ran into a taxi.")).toBeVisible();
   });
+
+  test("the Lab explains its power-ups before the run starts", async ({ page }) => {
+    await openUpTo(page, ["farm", "park", "market", "city", "road"]);
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='5']").click();
+    await expect(page.locator("[data-overlay]").getByText(/Power-ups appear on the board/)).toBeVisible();
+    await expect(page.locator('[data-hud="power"]')).toBeAttached();
+    await expect(page.locator('[data-hud="power"]')).not.toHaveAttribute("hidden");
+  });
+
+  test("in the Maze, running into a wall ends the run", async ({ page }) => {
+    await page.clock.install();
+    await openUpTo(page, ["farm", "park", "market", "city", "road", "lab"]);
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='6']").click();
+    // The Maze runs at 6 moves a second. The head starts at column 6, row 9, and a wall stands at column 10.
+    await page.keyboard.press("ArrowRight");
+    await page.clock.runFor(800);
+    await expect(page.locator("[data-overlay]").getByText("The snake ran into a wall of the maze.")).toBeVisible();
+  });
 });
 
 test.describe("on a phone", () => {

@@ -3,6 +3,7 @@
 import {
   LEVELS,
   createGame,
+  isSlow,
   moveMs,
   pause,
   tick,
@@ -10,6 +11,7 @@ import {
   turn,
   type GameEvent,
   type GameState,
+  type PowerKind,
 } from "../../../packages/core/src";
 import { commandForKey, listenForTouch, type Command } from "./input";
 import { sankofaLogo } from "./logo";
@@ -19,7 +21,21 @@ import { loadProgress, recordRun, saveProgress, type Progress } from "./storage"
 type Screen = "title" | "levels" | "help" | "game";
 
 /** What the obstacles are in each world, for the message after a crash. */
-const OBSTACLE_NAME: Record<string, string> = { market: "a market stall", city: "a building" };
+const OBSTACLE_NAME: Record<string, string> = {
+  market: "a market stall",
+  city: "a building",
+  lab: "a lab bench",
+  maze: "a wall of the maze",
+};
+
+/** What the screen reader says when the snake picks up each power-up. */
+const POWER_TEXT: Record<PowerKind, string> = {
+  slow: "Slow motion. The snake moves slower for a while.",
+  shrink: "Shrink. The snake is shorter now.",
+  pass: "Pass. The snake can go through its own tail once.",
+};
+
+const POWER_NAME: Record<PowerKind, string> = { slow: "slow motion", shrink: "shrink", pass: "pass" };
 
 /** One sentence saying what ended the run. */
 function crashText(s: GameState): string {
@@ -116,7 +132,8 @@ export class SankofaSnake {
       <ul class="ss-list">
         <li>Steer with the arrow keys or W, A, S and D. On a phone, swipe in the direction you want to go.</li>
         <li>Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.</li>
-        <li>The run ends if the snake runs into its own tail, an obstacle or a vehicle. Vehicles stop for the snake, so cross the road in front of them or behind them. In the City and on the Road, the edge of the board is a wall too.</li>
+        <li>The run ends if the snake runs into its own tail, an obstacle or a vehicle. Vehicles stop for the snake, so cross the road in front of them or behind them. From the City on, the edge of the board is a wall too.</li>
+        <li>In the Lab and the Maze, power-ups appear on the board for a short time. The gold hourglass is slow motion, the red arrows shrink the snake, and the green loop lets the snake pass through its own tail once.</li>
         <li>Pause with Space, P or Escape, or tap the board on a phone. The game also pauses when you switch tabs.</li>
         <li>Clearing a level earns one star. A high score and a fast finish earn up to two more.</li>
       </ul>
@@ -147,7 +164,7 @@ export class SankofaSnake {
     el.innerHTML = `
       <h2 class="ss-heading">Levels</h2>
       <ul class="ss-cards">${cards}</ul>
-      <p class="ss-note">More worlds are on the way: Lab, Maze, Ocean and the Weaving village.</p>
+      <p class="ss-note">More worlds are on the way: the Ocean and the Weaving village.</p>
       <div class="ss-actions"><button class="ss-btn" data-go="title">Back</button></div>`;
     el.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((b) => {
       b.addEventListener("click", () => this.startLevel(Number(b.dataset.level)));
@@ -166,6 +183,7 @@ export class SankofaSnake {
           <div><dt>Score</dt><dd data-hud="score"></dd></div>
           <div><dt>Best</dt><dd data-hud="best"></dd></div>
         </dl>
+        <p class="ss-hud-power" data-hud="power"></p>
       </div>
       <div class="ss-stage" data-stage>
         <canvas class="ss-canvas" role="img" aria-label="Game board"></canvas>
@@ -215,6 +233,8 @@ export class SankofaSnake {
     this.part("game").className = `ss-screen ss-game ss-world-${LEVELS[i].world}`;
     this.show("game");
     this.say(`Level ${LEVELS[i].number}, ${LEVELS[i].name}. ${LEVELS[i].challenge} Press an arrow key or swipe to start.`);
+    // The power-up line keeps its space on levels with power-ups, so the board doesn't jump.
+    this.part("game").querySelector<HTMLElement>('[data-hud="power"]')!.hidden = !LEVELS[i].powerUps;
     this.updateHud();
     this.updateOverlay();
     this.resize();
@@ -278,6 +298,9 @@ export class SankofaSnake {
     const level = this.state.level;
     if (e.type === "ate") this.say(`Cowrie ${this.state.eaten} of ${level.goal}. Score ${this.state.score}.`);
     if (e.type === "speedup") this.say("The snake is faster now.");
+    if (e.type === "powerAppeared") this.say(`A ${POWER_NAME[e.kind]} power-up appeared.`);
+    if (e.type === "power") this.say(POWER_TEXT[e.kind]);
+    if (e.type === "passed") this.say("The snake passed through its tail.");
     if (e.type === "crash") {
       this.progress = recordRun(this.progress, level.id, this.state.score, 0, false);
       saveProgress(this.progress);
@@ -302,6 +325,11 @@ export class SankofaSnake {
     set("eaten", `${s.eaten} of ${s.level.goal}`);
     set("score", String(s.score));
     set("best", String(Math.max(this.progress.levels[s.level.id]?.best ?? 0, s.score)));
+    const power = [
+      isSlow(s) ? `Slow motion for ${s.slowUntil - s.moves} more moves` : "",
+      s.passes > 0 ? (s.passes === 1 ? "One pass through the tail" : `${s.passes} passes through the tail`) : "",
+    ].filter(Boolean).join(". ");
+    set("power", power);
     const pauseBtn = el.querySelector<HTMLButtonElement>("[data-pause]")!;
     pauseBtn.textContent = s.status === "paused" ? "Resume" : "Pause";
     pauseBtn.disabled = s.status !== "running" && s.status !== "paused";
