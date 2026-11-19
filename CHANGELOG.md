@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2 (2026-11-19)
+
+- Copies of the game on one page, or in two browser tabs, now load each other's saved progress and switches. Before, turning Sound off on one copy could write over scores or cleared levels saved by another.
+
 ## 0.6.1 (2026-11-19)
 
 - The button that leaves a run now says Back, whichever way you were playing.

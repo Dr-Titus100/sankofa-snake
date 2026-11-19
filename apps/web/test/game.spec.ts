@@ -165,6 +165,36 @@ test("the play view leaves out How to play, and the help view shows only the rul
   await expect(page.getByRole("button", { name: "Play", exact: true })).toHaveCount(0);
 });
 
+test("a play view and a help view on one page, or in two tabs, share switches and progress", async ({ page, context }) => {
+  await page.route(/\/both-views\.html/, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><link rel="stylesheet" href="/sankofa-snake.css"><div id="play" data-sankofa-snake="play"></div><div id="help" data-sankofa-snake="help"></div><script type="module" src="/sankofa-snake.js"></script>`,
+    }),
+  );
+  await page.goto("/both-views.html?seed=1");
+  const help = page.locator("#help");
+  const play = page.locator("#play");
+  await help.getByRole("button", { name: "Sound", exact: true }).click();
+  await expect(help.getByRole("button", { name: "Sound", exact: true })).toHaveAttribute("aria-pressed", "false");
+  // The play view on the same page picks up the switch.
+  await play.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(play.locator(".ss-bar").getByRole("button", { name: "Sound" })).toHaveAttribute("aria-pressed", "false");
+
+  // Another tab clears a level. Turning a switch here afterward keeps that progress.
+  const other = await context.newPage();
+  await other.goto("/?seed=1");
+  await other.evaluate((key) => {
+    const saved = JSON.parse(localStorage.getItem(key) || "{}");
+    localStorage.setItem(key, JSON.stringify({ ...saved, levels: { farm: { best: 300, stars: 2, cleared: true } } }));
+  }, SAVE_KEY);
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).levels.farm?.cleared, SAVE_KEY)).toBe(true);
+  await help.getByRole("button", { name: "Vibration", exact: true }).click();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), SAVE_KEY);
+  expect(saved.levels.farm).toEqual({ best: 300, stars: 2, cleared: true });
+  expect(saved.settings).toEqual({ sound: false, vibration: false });
+});
+
 test("only the first level is open on a first visit", async ({ page }) => {
   await page.goto("/?seed=1");
   await page.getByRole("button", { name: "Choose a level" }).click();
