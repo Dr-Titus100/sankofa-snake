@@ -6,9 +6,11 @@ Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/g
 
 ## Levels
 
-1. Farm. You learn the controls. The edges wrap around and the speed stays the same.
-2. Park. The snake speeds up after every 5 cowries.
-3. Market. Market stalls block parts of the board.
+| Level | World | What's new |
+| --- | --- | --- |
+| 1 | Farm | Learn the controls. The edges wrap around and the speed stays the same. |
+| 2 | Park | The snake speeds up after every 5 cowries. |
+| 3 | Market | Market stalls block parts of the board. |
 
 Eat 20 cowries to clear a level and open the next one. Clearing a level earns one star, and a high score with a fast finish earns up to two more. City, Road, Lab, Maze, Ocean and the Weaving village come next.
 
