@@ -1,0 +1,75 @@
+{
+  "id": "road",
+  "number": 5,
+  "name": "Road",
+  "world": "road",
+  "challenge": "Trotros and taxis drive across the board. Cross the roads between them.",
+  "width": 20,
+  "height": 20,
+  "edges": "walls",
+  "speed": {
+    "start": 6,
+    "step": 1,
+    "every": 5,
+    "max": 9
+  },
+  "goal": 20,
+  "parSeconds": 65,
+  "stars": [
+    560,
+    620
+  ],
+  "start": {
+    "x": 5,
+    "y": 10,
+    "dir": "right",
+    "length": 3
+  },
+  "vehicles": [
+    {
+      "kind": "trotro",
+      "axis": "row",
+      "lane": 4,
+      "dir": 1,
+      "length": 3,
+      "every": 3,
+      "start": 2
+    },
+    {
+      "kind": "taxi",
+      "axis": "row",
+      "lane": 7,
+      "dir": -1,
+      "length": 2,
+      "every": 2,
+      "start": 15
+    },
+    {
+      "kind": "trotro",
+      "axis": "row",
+      "lane": 14,
+      "dir": -1,
+      "length": 3,
+      "every": 3,
+      "start": 6
+    },
+    {
+      "kind": "taxi",
+      "axis": "row",
+      "lane": 14,
+      "dir": -1,
+      "length": 2,
+      "every": 3,
+      "start": 16
+    },
+    {
+      "kind": "taxi",
+      "axis": "row",
+      "lane": 17,
+      "dir": 1,
+      "length": 2,
+      "every": 2,
+      "start": 4
+    }
+  ]
+}

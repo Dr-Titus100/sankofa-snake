@@ -9,6 +9,7 @@ import {
   togglePause,
   turn,
   validateLevel,
+  vehicleCells,
   type GameState,
   type LevelDef,
 } from "../src";
@@ -215,12 +216,71 @@ describe("pausing", () => {
   });
 });
 
+describe("vehicles", () => {
+  // A taxi two cells long on row 2, driving right one cell per snake move, starting with its front at x = 1.
+  const taxi = { kind: "taxi" as const, axis: "row" as const, lane: 2, dir: 1 as const, length: 2, every: 1, start: 1 };
+
+  it("covers the cells behind its front, coming back around at the far edge", () => {
+    const level = testLevel({ vehicles: [taxi] });
+    expect(vehicleCells(taxi, level, 1)).toEqual([{ x: 1, y: 2 }, { x: 0, y: 2 }]);
+    expect(vehicleCells(taxi, level, 0)).toEqual([{ x: 0, y: 2 }, { x: 9, y: 2 }]);
+  });
+
+  it("drives one cell per move, or one cell every few moves when it is slow", () => {
+    const g = withFood(turn(createGame(testLevel({ vehicles: [taxi, { ...taxi, lane: 8, every: 3 }] }), 1), "right"), 0, 0);
+    expect(run(g, 3).vehicles).toEqual([4, 2]);
+    expect(run(g, 9).vehicles).toEqual([0, 4]);
+  });
+
+  it("ends the run when the snake drives into a vehicle", () => {
+    // The snake heads up column 4 and meets a parked taxi on row 2 three moves later.
+    const parked = { ...taxi, start: 5, every: 100 };
+    let g = withFood(turn(createGame(testLevel({ vehicles: [parked] }), 1), "up"), 0, 9);
+    g = run(g, 3);
+    expect(g.status).toBe("over");
+    expect(g.crash).toBe("vehicle");
+    expect(g.crashVehicle).toBe("taxi");
+    expect(g.crashAt).toEqual({ x: 4, y: 2 });
+  });
+
+  it("stops and waits while the snake crosses in front of it", () => {
+    // The snake lies across row 3 at column 3, and the taxi on row 3 is right behind that cell.
+    const level = testLevel({ start: { x: 3, y: 4, dir: "down", length: 3 }, vehicles: [{ ...taxi, lane: 3, start: 2 }] });
+    let g = withFood(turn(createGame(level, 1), "down"), 9, 9);
+    expect(g.snake).toEqual([{ x: 3, y: 4 }, { x: 3, y: 3 }, { x: 3, y: 2 }]);
+    g = run(g, 1);
+    expect(g.status).toBe("running");
+    expect(g.vehicles).toEqual([2]);
+    g = run(g, 2);
+    expect(g.status).toBe("running");
+    expect(g.vehicles[0]).toBeGreaterThan(2);
+  });
+
+  it("never puts a cowrie under a vehicle", () => {
+    const bus = { ...taxi, lane: 0, length: 9, every: 100, start: 8 };
+    const level = testLevel({ vehicles: [bus] });
+    for (let seed = 1; seed < 40; seed++) {
+      const g = createGame(level, seed);
+      expect(g.food!.y === 0 && g.food!.x <= 8).toBe(false);
+    }
+  });
+
+  it("catches a lane that runs through an obstacle", () => {
+    const map = Array.from({ length: 10 }, (_, y) => (y === 2 ? "......#..." : ".........."));
+    expect(validateLevel(testLevel({ map, vehicles: [taxi] }))).toContain("vehicle 0 drives through the obstacle at 6,2");
+  });
+
+  it("catches a snake that starts on a lane", () => {
+    expect(validateLevel(testLevel({ vehicles: [{ ...taxi, lane: 5 }] }))).toContain("start cell 4,5 is on a vehicle's lane");
+  });
+});
+
 describe("level files", () => {
   it.each(LEVELS.map((l) => [l.name, l] as const))("%s has no mistakes", (_, level) => {
     expect(validateLevel(level)).toEqual([]);
   });
 
-  it("numbers the levels 1, 2, 3 in order", () => {
+  it("numbers the levels in order from 1", () => {
     expect(LEVELS.map((l) => l.number)).toEqual(LEVELS.map((_, i) => i + 1));
   });
 
