@@ -98,6 +98,8 @@ export interface LevelDef {
   vehicles?: VehicleDef[];
   /** Power-ups that appear while the snake eats. Leave it out for a level with none. */
   powerUps?: PowerUpRule;
+  /** In practice, running into something stops the snake instead of ending the run. */
+  practice?: boolean;
 }
 
 export type Status = "ready" | "running" | "paused" | "over" | "cleared";
@@ -144,6 +146,8 @@ export interface GameState {
   crash?: Crash;
   /** The kind of vehicle the snake ran into, when crash is "vehicle". */
   crashVehicle?: VehicleDef["kind"];
+  /** In practice, what the snake last bumped into. It waits for a new direction after a bump. */
+  bump?: Crash;
   /** True when a current pushed the snake into whatever ended the run. */
   crashPushed?: boolean;
   /** The cell the snake tried to move into when it crashed. */
@@ -156,6 +160,7 @@ export type GameEvent =
   | { type: "ate"; at: Cell; points: number }
   | { type: "speedup"; speed: number }
   | { type: "crash"; cause: Crash }
+  | { type: "bump"; cause: Crash }
   | { type: "power"; kind: PowerKind }
   | { type: "powerAppeared"; kind: PowerKind; at: Cell }
   | { type: "powerGone" }

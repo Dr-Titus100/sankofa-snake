@@ -29,15 +29,48 @@ function watchErrors(page: Page) {
   return errors;
 }
 
-test("the title screen shows the logo and the three buttons", async ({ page }) => {
+test("the title screen shows the logo and the four buttons", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto("/?seed=1");
   await expect(page.getByRole("heading", { name: "Sankofa Snake", level: 2 })).toBeVisible();
   await expect(page.getByRole("img", { name: /Sankofa bird/ })).toBeVisible();
-  for (const name of ["Play", "Choose a level", "How to play"]) {
+  for (const name of ["Play", "Daily challenge", "Choose a level", "How to play"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
   expect(errors).toEqual([]);
+});
+
+test("the daily challenge is the same for everyone on a date and shows the streak", async ({ page }) => {
+  await page.clock.install({ time: new Date(2026, 10, 19, 9, 0) });
+  await page.addInitScript((key) => {
+    localStorage.setItem(
+      key,
+      JSON.stringify({ levels: {}, daily: { date: "2026-11-18", best: 400, cleared: true, streak: 3, lastCleared: "2026-11-18", bestStreak: 5 } }),
+    );
+  }, SAVE_KEY);
+  await page.goto("/?seed=1");
+  await page.getByRole("button", { name: "Daily challenge" }).click();
+  await expect(page.getByText(/Thursday 19 November/)).toBeVisible();
+  // Yesterday's clear keeps the streak going until today's challenge is played.
+  await expect(page.locator(".ss-streak")).toHaveText("Streak: 3 days. Longest: 5 days.");
+  await expect(page.getByText("Today's best 0")).toBeVisible();
+  const world = await page.locator(".ss-daily-card .ss-card-name").textContent();
+  await page.getByRole("button", { name: "Play today's challenge" }).click();
+  await expect(page.locator('[data-hud="level"]')).toHaveText(`Daily challenge: ${world}`);
+  await page.getByRole("button", { name: "Daily challenge", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Daily challenge" })).toBeVisible();
+});
+
+test("free play lists only the worlds already opened", async ({ page }) => {
+  await unlockAll(page);
+  await page.goto("/?seed=1");
+  await page.getByRole("button", { name: "Choose a level" }).click();
+  await page.getByRole("button", { name: "Free play", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Free play", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-level='2']")).toBeEnabled();
+  await expect(page.locator("[data-level='3']")).toBeDisabled();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await expect(page.locator("[data-level='8']")).toBeEnabled();
 });
 
 test("Choose a level and How to play turn gold under the pointer", async ({ page, isMobile }) => {
@@ -172,6 +205,40 @@ test.describe("on a computer", () => {
     await page.keyboard.press("ArrowUp");
     await page.clock.runFor(1800);
     await expect(page.locator("[data-overlay]").getByText("The snake hit the wall.")).toBeVisible();
+  });
+
+  test("in free play with walls, the run ends at the edge and counts the cowries", async ({ page }) => {
+    await page.clock.install();
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.getByRole("button", { name: "Free play", exact: true }).click();
+    await page.getByRole("button", { name: "Walls", exact: true }).click();
+    await page.locator("[data-level='0']").click();
+    await expect(page.locator('[data-hud="level"]')).toHaveText("Free play: Farm");
+    // The Farm runs at 6 moves a second from column 5, row 10, so 11 moves up reach the top wall.
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(2300);
+    await expect(page.locator("[data-overlay]").getByText("The snake hit the wall.")).toBeVisible();
+    await expect(page.locator("[data-overlay]").getByText(/You collected \d+ cowries?\. Your best here is \d+\./)).toBeVisible();
+    await page.locator("[data-overlay]").getByRole("button", { name: "Free play" }).click();
+    await expect(page.getByRole("heading", { name: "Free play" })).toBeVisible();
+  });
+
+  test("in practice, hitting the wall only stops the snake", async ({ page }) => {
+    await page.clock.install();
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await page.locator("[data-level='3']").click();
+    await expect(page.locator('[data-hud="level"]')).toHaveText("Practice: City");
+    await expect(page.locator('[data-hud="best"]')).toBeHidden();
+    // Practice runs the City at 4 moves a second, so 11 moves up from row 10 take under 3 seconds.
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(3200);
+    await expect(page.locator("[data-overlay]").getByText("The snake bumped into the wall.", { exact: false })).toBeVisible();
+    await expect(page.locator("[data-overlay]").getByText("Game over")).toHaveCount(0);
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.locator("[data-overlay]")).toBeHidden();
   });
 
   test("the Weaving village says it has every challenge at once", async ({ page }) => {

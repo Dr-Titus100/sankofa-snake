@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 (2026-11-19)
+
+- Daily challenge: the date picks a world, its edges, a pace and whether power-ups appear. Everyone gets the same challenge and the same cowries that day. Clearing it on days in a row builds a streak.
+- Free play: the classic game in any world you have opened, with wrap-around edges or walls, until the snake crashes. The game keeps your best cowrie count for each world and edge choice.
+- Practice: every level at a slower, steady speed. Running into something stops the snake instead of ending the run.
+- The level list has tabs for Levels, Free play and Practice.
+
 ## 0.4.0 (2026-11-19)
 
 - Level 8, Ocean: currents push the snake one square the way their arrows point when it swims across them. Swimming along a current does nothing. Fishing canoes float in the way.

@@ -20,6 +20,14 @@ Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/g
 
 Eat 20 cowries to clear a level and open the next one. Clearing a level earns one star, and a high score with a fast finish earns up to two more.
 
+## Other ways to play
+
+The daily challenge changes every day. The date picks a world, its edges, a pace and whether power-ups appear, and the cowries start in the same places for everyone that day. Clear it on days in a row to build a streak.
+
+Free play is the classic game in any world you have opened, with wrap-around edges or walls. It has no goal and goes on until the snake crashes. The game keeps your best cowrie count for each world.
+
+Practice opens every level at a slower, steady speed. Running into something only stops the snake until you pick a new direction, so it works well for a class demo.
+
 ## Controls
 
 - Arrow keys or W, A, S and D steer. On a phone, swipe.
@@ -39,7 +47,7 @@ The rules and the drawing live in separate folders on purpose. `packages/core` d
 
 A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and the Road's trotros and taxis are listed under `vehicles` in `levels/05-road.json`, each with its lane, direction, length and speed. Currents are the arrows `<`, `>`, `^` and `v` in the Ocean's map. The Lab's `powerUps` setting says which power-ups can appear, how often and for how long. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
 
-The cowries land in random places, but the random numbers come from a seed. The same seed always gives the same game, which the tests rely on and which a daily challenge will use later. Add `?seed=42` to the game's address to try it.
+The cowries land in random places, but the random numbers come from a seed. The same seed always gives the same game, which the tests and the daily challenge rely on. Add `?seed=42` to the game's address to try it.
 
 ## Working on it
 
@@ -67,7 +75,7 @@ The release workflow tests and builds the game, then attaches the built files to
 
 ## Privacy
 
-The game keeps scores and progress in your browser's local storage. It sends nothing to any server and has no ads or trackers.
+The game keeps scores, progress and the daily streak in your browser's local storage. It sends nothing to any server and has no ads or trackers.
 
 ## Credits
 
