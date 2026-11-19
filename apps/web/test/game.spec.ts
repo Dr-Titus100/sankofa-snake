@@ -335,6 +335,23 @@ test.describe("on a phone", () => {
     expect(widths[0]).toBeLessThanOrEqual(widths[1]);
   });
 
+  test("pressing Play starts the sound, so swipes alone don't leave it silent", async ({ page }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { audioStarts: number };
+      w.audioStarts = 0;
+      const Base = window.AudioContext;
+      window.AudioContext = class extends Base {
+        constructor(options?: AudioContextOptions) {
+          super(options);
+          w.audioStarts++;
+        }
+      };
+    });
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    expect(await page.evaluate(() => (window as unknown as { audioStarts: number }).audioStarts)).toBe(1);
+  });
+
   test("a swipe starts the snake and a tap pauses it", async ({ page }) => {
     await page.goto("/?seed=1");
     await page.getByRole("button", { name: "Play", exact: true }).click();

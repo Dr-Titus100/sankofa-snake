@@ -320,7 +320,10 @@ export class SankofaSnake {
     this.canvas = el.querySelector("canvas")!;
     this.ctx = this.canvas.getContext("2d")!;
     el.querySelector("[data-pause]")!.addEventListener("click", () => this.command({ type: "pause" }));
-    listenForTouch(el.querySelector("[data-stage]")!, (c) => this.command(c));
+    const stage = el.querySelector<HTMLElement>("[data-stage]")!;
+    listenForTouch(stage, (c) => this.command(c));
+    // A swipe steers during touchmove, which iPhones don't count as a press for sound. The end of the touch does count.
+    stage.addEventListener("touchend", () => this.sound.unlock(), { passive: true });
     el.querySelector("[data-back]")!.addEventListener("click", () => this.back());
     el.querySelector("[data-setting]")!.addEventListener("click", () => this.toggleSetting("sound"));
     this.syncSettings();
@@ -345,6 +348,7 @@ export class SankofaSnake {
     saveProgress(this.progress);
     this.sound.soundOn = settings.sound;
     this.sound.vibrationOn = settings.vibration;
+    this.sound.unlock();
     this.syncSettings();
     this.say(`${name === "sound" ? "Sound" : "Vibration"} ${settings[name] ? "on" : "off"}.`);
   }
@@ -394,6 +398,8 @@ export class SankofaSnake {
   // Playing
 
   private startRun(mode: Mode, i: number) {
+    // Every way into a run is a button press, which iPhones need before they allow sound.
+    this.sound.unlock();
     this.mode = mode;
     if (mode !== "daily") this.listMode = mode;
     let level: LevelDef;
