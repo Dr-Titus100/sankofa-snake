@@ -289,3 +289,53 @@
 .ss-overlay-passive .ss-overlay-title {
   font-size: 1.1rem;
 }
+
+/* Tabs for the ways to play, and the edge choice in free play */
+.ss-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.ss-tab {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 2px solid rgba(247, 238, 220, 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ss-cream);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ss-tab:hover {
+  border-color: var(--ss-gold);
+}
+.ss-tab[aria-pressed="true"] {
+  border-color: var(--ss-gold);
+  background: var(--ss-gold);
+  color: var(--ss-black);
+}
+.ss-tabs-small .ss-tab {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.92em;
+}
+.ss-intro {
+  margin-top: 0;
+}
+
+/* Daily challenge */
+.ss-daily-card {
+  max-width: 30em;
+  margin: 0 auto;
+  cursor: default;
+}
+.ss-streak {
+  margin: 14px 0 0;
+  text-align: center;
+}
+.ss-streak strong {
+  color: var(--ss-gold);
+}

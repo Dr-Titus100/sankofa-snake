@@ -1,6 +1,7 @@
 // Saves best scores, stars and cleared levels in the browser. Nothing leaves the device.
 // Some browsers block storage (private windows, strict settings), so every read and write
 // is wrapped, and the game still works without it. Progress then lasts only until the page closes.
+import { dayBefore, nextStreak } from "../../../packages/core/src";
 
 export interface LevelProgress {
   best: number;
@@ -8,8 +9,23 @@ export interface LevelProgress {
   cleared: boolean;
 }
 
+/** The daily challenge: today's best, and the streak of days in a row with a clear. */
+export interface DailyProgress {
+  /** The date the best score belongs to, as YYYY-MM-DD. */
+  date: string;
+  best: number;
+  cleared: boolean;
+  streak: number;
+  /** The last date the player cleared the daily challenge. */
+  lastCleared?: string;
+  bestStreak: number;
+}
+
 export interface Progress {
   levels: Record<string, LevelProgress>;
+  daily?: DailyProgress;
+  /** The most cowries collected in one free play run, by world and edges. */
+  free?: Record<string, number>;
 }
 
 const KEY = "sankofa-snake/v1";
@@ -43,5 +59,39 @@ export function recordRun(progress: Progress, levelId: string, score: number, st
     stars: Math.max(old.stars, stars),
     cleared: old.cleared || cleared,
   };
-  return { levels: { ...progress.levels, [levelId]: next } };
+  return { ...progress, levels: { ...progress.levels, [levelId]: next } };
+}
+
+/** Records a daily challenge run and returns the updated progress. */
+export function recordDaily(progress: Progress, date: string, score: number, cleared: boolean): Progress {
+  const old = progress.daily;
+  const sameDay = old?.date === date;
+  const daily: DailyProgress = {
+    date,
+    best: Math.max(sameDay ? old.best : 0, score),
+    cleared: (sameDay && old.cleared) || cleared,
+    streak: old?.streak ?? 0,
+    lastCleared: old?.lastCleared,
+    bestStreak: old?.bestStreak ?? 0,
+  };
+  if (cleared) {
+    daily.streak = nextStreak(old?.lastCleared, old?.streak ?? 0, date);
+    daily.lastCleared = date;
+    daily.bestStreak = Math.max(daily.bestStreak, daily.streak);
+  }
+  return { ...progress, daily };
+}
+
+/** The streak to show today. It drops to 0 once a whole day passes without a clear. */
+export function currentStreak(progress: Progress, today: string): number {
+  const d = progress.daily;
+  if (!d?.lastCleared) return 0;
+  return d.lastCleared === today || d.lastCleared === dayBefore(today) ? d.streak : 0;
+}
+
+/** Records a free play run and returns the updated progress. */
+export function recordFree(progress: Progress, key: string, eaten: number): Progress {
+  const free = { ...progress.free };
+  free[key] = Math.max(free[key] ?? 0, eaten);
+  return { ...progress, free };
 }
