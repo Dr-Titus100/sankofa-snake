@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 (2026-11-19)
+
+- Level 8, Ocean: currents push the snake one square the way their arrows point when it swims across them. Swimming along a current does nothing. Fishing canoes float in the way.
+- Level 9, Weaving village: walls, looms, trotros, taxis, currents and power-ups all at once, at the fastest speed in the game.
+- When a current pushes the snake into something, the message after the crash says so.
+- All nine levels from the plan are now in the game.
+
 ## 0.3.0 (2026-11-19)
 
 - Level 6, Lab: power-ups appear on the board for a short time. Slow motion (a gold hourglass) slows the snake down for 40 moves, shrink (red arrows) takes four cells off the tail, and a pass (a green loop) lets the snake through its own tail once.

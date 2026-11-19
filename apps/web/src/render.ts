@@ -1,6 +1,6 @@
 // Draws the board on a canvas: the kente frame, the scenery of each world, the market stalls,
-// city buildings, lab benches and maze walls, the roads and their vehicles, the power-ups, the
-// cowrie and the snake made of woven blocks.
+// city buildings, lab benches, maze walls, canoes and looms, the roads and their vehicles, the
+// currents, the power-ups, the cowrie and the snake made of woven blocks.
 // Nothing here changes the game.
 import {
   isSlow,
@@ -137,6 +137,38 @@ const WORLDS: Record<LevelDef["world"], World> = {
       }
     },
   },
+  ocean: {
+    ground: "#0E2A3A",
+    detail(ctx, x, y, s, cx, cy) {
+      // Small wave crests here and there.
+      if (cellHash(cx, cy) % 5 === 1) {
+        ctx.strokeStyle = "rgba(247,238,220,0.14)";
+        ctx.lineWidth = Math.max(1, s * 0.05);
+        ctx.beginPath();
+        ctx.moveTo(x + s * 0.2, y + s * 0.6);
+        ctx.quadraticCurveTo(x + s * 0.35, y + s * 0.45, x + s * 0.5, y + s * 0.6);
+        ctx.quadraticCurveTo(x + s * 0.65, y + s * 0.45, x + s * 0.8, y + s * 0.6);
+        ctx.stroke();
+      }
+    },
+  },
+  village: {
+    ground: "#33251A",
+    detail(ctx, x, y, s, cx, cy) {
+      // Swept earth, with now and then a fallen thread in kente colors.
+      const h = cellHash(cx, cy);
+      if (h % 13 === 5) {
+        ctx.strokeStyle = [K.gold, K.green, K.red][h % 3];
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = Math.max(1, s * 0.04);
+        ctx.beginPath();
+        ctx.moveTo(x + s * 0.2, y + s * 0.7);
+        ctx.quadraticCurveTo(x + s * 0.5, y + s * 0.3, x + s * 0.8, y + s * 0.6);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    },
+  },
 };
 
 /** How each world draws its obstacles. */
@@ -144,6 +176,8 @@ const OBSTACLES: Partial<Record<LevelDef["world"], typeof drawStall>> = {
   city: drawBuilding,
   lab: drawBench,
   maze: drawReedWall,
+  ocean: drawCanoe,
+  village: drawLoom,
 };
 
 export interface Layout {
@@ -189,12 +223,16 @@ export function draw(ctx: CanvasRenderingContext2D, state: GameState, layout: La
   ctx.stroke();
 
   for (const v of level.vehicles ?? []) drawLane(ctx, v, layout, level);
+  for (const [k, dir] of state.currents) {
+    const [cx, cy] = k.split(",").map(Number);
+    drawCurrent(ctx, frame + cx * cell, frame + cy * cell, cell, dir, still ? 0 : time);
+  }
   if (level.edges === "walls") drawWalls(ctx, layout);
 
   const drawObstacle = OBSTACLES[level.world] ?? drawStall;
   for (const k of state.obstacles) {
     const [cx, cy] = k.split(",").map(Number);
-    drawObstacle(ctx, frame + cx * cell, frame + cy * cell, cell, state.obstacles.has(`${cx},${cy - 1}`), cx, cy);
+    drawObstacle(ctx, frame + cx * cell, frame + cy * cell, cell, state.obstacles.has(`${cx},${cy - 1}`), cx, cy, state.obstacles);
   }
 
   if (state.powerUp) drawPowerUp(ctx, state.powerUp, state.moves, layout, time, still);
@@ -379,7 +417,7 @@ function drawCowrie(ctx: CanvasRenderingContext2D, x: number, y: number, s: numb
 }
 
 /** A market stall: a striped kente awning over a wooden crate, or produce in a stall's back row. */
-function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, backRow: boolean, _cx = 0, _cy = 0) {
+function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, backRow: boolean, _cx = 0, _cy = 0, _obstacles?: Set<string>) {
   const pad = s * 0.04;
   ctx.fillStyle = "#7A4E2D";
   ctx.fillRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
@@ -681,4 +719,90 @@ function drawPowerUp(ctx: CanvasRenderingContext2D, p: PowerUp, moves: number, l
     ctx.ellipse(cx + r * 0.22, cy, r * 0.3, r * 0.42, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
+}
+
+const ARROW: Record<Direction, [number, number]> = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] };
+
+/**
+ * A current: a lighter strip of water with a chevron pointing the way it pushes. The chevrons
+ * drift slowly in that direction, unless the player asked for less motion.
+ */
+function drawCurrent(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, dir: Direction, time: number) {
+  ctx.fillStyle = "rgba(90,170,200,0.28)";
+  ctx.fillRect(x, y, s, s);
+  const [dx, dy] = ARROW[dir];
+  const drift = ((time / 900) % 1) * 0.3 - 0.15;
+  const cx = x + s * (0.5 + dx * drift);
+  const cy = y + s * (0.5 + dy * drift);
+  const a = s * 0.2;
+  ctx.strokeStyle = "rgba(247,238,220,0.7)";
+  ctx.lineWidth = Math.max(1.5, s * 0.09);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  // Two arms that meet at the tip, pointing in the push direction.
+  ctx.moveTo(cx - dx * a - dy * a, cy - dy * a - dx * a);
+  ctx.lineTo(cx + dx * a * 0.6, cy + dy * a * 0.6);
+  ctx.lineTo(cx - dx * a + dy * a, cy - dy * a + dx * a);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+}
+
+/**
+ * A fishing canoe seen from above, pointed at both ends, painted in kente bands. A canoe three
+ * cells long is drawn as one boat: the end pieces are the bow and stern, the middle is the hull.
+ */
+function drawCanoe(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, _backRow: boolean, cx = 0, cy = 0, obstacles?: Set<string>) {
+  const left = obstacles?.has(`${cx - 1},${cy}`) ?? false;
+  const right = obstacles?.has(`${cx + 1},${cy}`) ?? false;
+  const top = y + s * 0.22;
+  const bottom = y + s * 0.78;
+  ctx.fillStyle = "#7A4E2D";
+  ctx.strokeStyle = K.black;
+  ctx.lineWidth = Math.max(1, s * 0.06);
+  ctx.beginPath();
+  ctx.moveTo(left ? x : x + s * 0.05, left ? top : y + s * 0.5);
+  if (!left) ctx.quadraticCurveTo(x + s * 0.2, top, x + s * 0.5, top);
+  ctx.lineTo(right ? x + s : x + s * 0.5, top);
+  if (!right) ctx.quadraticCurveTo(x + s * 0.8, top, x + s * 0.95, y + s * 0.5);
+  if (!right) ctx.quadraticCurveTo(x + s * 0.8, bottom, x + s * 0.5, bottom);
+  ctx.lineTo(left ? x : x + s * 0.5, bottom);
+  if (!left) ctx.quadraticCurveTo(x + s * 0.2, bottom, x + s * 0.05, y + s * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Painted bands along the side.
+  const bands = [K.gold, K.red, K.green];
+  bands.forEach((color, i) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x + (left ? 0 : s * 0.3), y + s * (0.32 + i * 0.12), s - (left ? 0 : s * 0.3) - (right ? 0 : s * 0.3), s * 0.1);
+  });
+}
+
+/**
+ * A kente loom seen from above: a wooden frame with a strip of cloth half woven on it, gold, green
+ * and red. The pattern changes from loom to loom.
+ */
+function drawLoom(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, _backRow: boolean, cx = 0, cy = 0) {
+  const pad = s * 0.06;
+  ctx.fillStyle = "#5A3A1E";
+  ctx.fillRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+  const colors = [K.gold, K.green, K.red, K.gold, K.black];
+  const shift = cellHash(cx, cy) % colors.length;
+  const strip = s * 0.5;
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = colors[(i + shift) % colors.length];
+    ctx.fillRect(x + (s - strip) / 2, y + pad + i * ((s - pad * 2) / 5), strip, (s - pad * 2) / 5);
+  }
+  // Warp threads running past the cloth.
+  ctx.strokeStyle = "rgba(247,238,220,0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const f of [0.3, 0.42, 0.58, 0.7]) {
+    ctx.moveTo(x + s * f, y + pad);
+    ctx.lineTo(x + s * f, y + s - pad);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = K.black;
+  ctx.lineWidth = Math.max(1, s * 0.06);
+  ctx.strokeRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
 }

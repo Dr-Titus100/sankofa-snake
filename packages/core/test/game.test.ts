@@ -364,6 +364,62 @@ describe("power-ups", () => {
   });
 });
 
+describe("currents", () => {
+  // A current on row 3 that pushes right, across the whole board.
+  const map = Array.from({ length: 10 }, (_, y) => (y === 3 ? ">>>>>>>>>>" : ".........."));
+
+  it("pushes the head one cell sideways when the snake crosses it", () => {
+    let g = withFood(turn(createGame(testLevel({ map }), 1), "up"), 0, 9);
+    g = run(g, 1);
+    expect(g.snake[0]).toEqual({ x: 4, y: 4 });
+    const { state, events } = tick(g);
+    expect(state.snake[0]).toEqual({ x: 5, y: 3 });
+    expect(state.snake[1]).toEqual({ x: 4, y: 3 });
+    expect(events).toContainEqual({ type: "current", dir: "right" });
+    // The snake keeps heading up after the push.
+    expect(tick(state).state.snake[0]).toEqual({ x: 5, y: 2 });
+  });
+
+  it("does nothing when the snake swims along it or against it", () => {
+    const level = testLevel({ map, start: { x: 4, y: 3, dir: "left", length: 1 } });
+    expect(validateLevel(level)).toContain("start cell 4,3 is on a current");
+    let g = withFood(turn(createGame(level, 1), "left"), 0, 9);
+    g = run(g, 2);
+    expect(g.snake[0]).toEqual({ x: 2, y: 3 });
+  });
+
+  it("blocks a turn back into the neck right after a push", () => {
+    let g = withFood(turn(createGame(testLevel({ map }), 1), "up"), 0, 9);
+    g = run(g, 2);
+    expect(g.lastStep).toBe("right");
+    expect(turn(g, "left").queue).toEqual([]);
+    expect(turn(g, "right").queue).toEqual(["right"]);
+  });
+
+  it("can push the snake into a wall, and says so", () => {
+    const level = testLevel({ map, edges: "walls", start: { x: 9, y: 6, dir: "up", length: 3 } });
+    let g = withFood(turn(createGame(level, 1), "up"), 0, 9);
+    g = run(g, 3);
+    expect(g.status).toBe("over");
+    expect(g.crash).toBe("wall");
+    expect(g.crashPushed).toBe(true);
+  });
+
+  it("lets the snake eat a cowrie where the current leaves it", () => {
+    let g = withFood(turn(createGame(testLevel({ map }), 1), "up"), 5, 3);
+    g = run(g, 2);
+    expect(g.eaten).toBe(1);
+    expect(g.snake).toHaveLength(4);
+  });
+
+  it("catches a vehicle lane through a current and a map with an unknown character", () => {
+    const taxi = { kind: "taxi" as const, axis: "row" as const, lane: 3, dir: 1 as const, length: 2, every: 1, start: 1 };
+    expect(validateLevel(testLevel({ map, vehicles: [taxi] }))).toContain("vehicle 0 drives through the current at 0,3");
+    const bad = map.map((r, y) => (y === 0 ? "....~....." : r));
+    expect(validateLevel(testLevel({ map: bad }))).toContain('map row 0 uses a character other than ".", "#", "<", ">", "^" and "v"');
+  });
+});
+
 describe("level files", () => {
   it.each(LEVELS.map((l) => [l.name, l] as const))("%s has no mistakes", (_, level) => {
     expect(validateLevel(level)).toEqual([]);
