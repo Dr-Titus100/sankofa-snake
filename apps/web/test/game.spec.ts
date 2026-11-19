@@ -29,12 +29,24 @@ test("the title screen shows the logo and the three buttons", async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test("Choose a level and How to play turn gold under the pointer", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Phones have no hover.");
+  await page.goto("/?seed=1");
+  for (const name of ["Choose a level", "How to play"]) {
+    const button = page.getByRole("button", { name, exact: true });
+    await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await button.hover();
+    await expect(button).toHaveCSS("background-color", "rgb(242, 183, 5)");
+    await expect(button).toHaveCSS("color", "rgb(20, 16, 16)");
+  }
+});
+
 test("only the first level is open on a first visit", async ({ page }) => {
   await page.goto("/?seed=1");
   await page.getByRole("button", { name: "Choose a level" }).click();
   await expect(page.locator("[data-level='0']")).toBeEnabled();
   await expect(page.locator("[data-level='1']")).toBeDisabled();
-  await expect(page.locator("[data-level='2']")).toContainText("Clear the Park to unlock");
+  await expect(page.locator("[data-level='2']")).toContainText("Clear the Park to open this level");
 });
 
 test("a cleared level unlocks the next one", async ({ page }) => {

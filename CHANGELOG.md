@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 (2026-11-19)
+
+- Every button turns kente gold under the pointer, including Choose a level and How to play.
+- Clearer wording on the title screen, the help screen and the level list.
+
 ## 0.1.0 (2026-11-19)
 
 The first playable version, for the web.

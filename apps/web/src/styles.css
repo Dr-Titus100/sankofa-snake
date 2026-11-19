@@ -78,15 +78,19 @@
   font-weight: 600;
   cursor: pointer;
 }
-.ss-btn:hover {
-  background: rgba(247, 238, 220, 0.1);
+/* Every button turns kente gold under the pointer, including Choose a level and How to play. */
+.ss-btn:hover:not(:disabled) {
+  border-color: var(--ss-gold);
+  background: var(--ss-gold);
+  color: var(--ss-black);
 }
 .ss-btn.ss-primary {
   border-color: var(--ss-gold);
   background: var(--ss-gold);
   color: var(--ss-black);
 }
-.ss-btn.ss-primary:hover {
+.ss-btn.ss-primary:hover:not(:disabled) {
+  border-color: #ffcb2e;
   background: #ffcb2e;
 }
 .ss-btn:disabled {

@@ -87,7 +87,7 @@ export class SankofaSnake {
     el.innerHTML = `
       <div class="ss-logo">${sankofaLogo(150, "Sankofa bird, the game's logo")}</div>
       <h2 class="ss-heading">Sankofa Snake</h2>
-      <p class="ss-lead">Guide a snake woven from kente cloth to collect cowrie shells. Each level is a new world with a new challenge.</p>
+      <p class="ss-lead">Steer a snake of woven kente blocks around the board and collect cowrie shells. Each level adds a new world and one new rule.</p>
       <div class="ss-actions">
         <button class="ss-btn ss-primary" data-play data-focus>Play</button>
         <button class="ss-btn" data-go="levels">Choose a level</button>
@@ -104,7 +104,7 @@ export class SankofaSnake {
       <h2 class="ss-heading">How to play</h2>
       <ul class="ss-list">
         <li>Steer with the arrow keys or W, A, S and D. On a phone, swipe in the direction you want to go.</li>
-        <li>Eat 20 cowrie shells to clear a level and unlock the next one. The snake grows with each shell.</li>
+        <li>Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.</li>
         <li>The run ends if the snake hits its own tail, a wall or a market stall.</li>
         <li>Pause with Space, P or Escape, or tap the board on a phone. The game also pauses when you switch tabs.</li>
         <li>Clearing a level earns one star. A high score and a fast finish earn up to two more.</li>
@@ -122,7 +122,7 @@ export class SankofaSnake {
         ? p
           ? `<span class="ss-stars" aria-label="${p.stars} of 3 stars">${starText(p.stars)}</span><span>Best ${p.best}</span>`
           : `<span>Not played yet</span>`
-        : `<span>Clear the ${LEVELS[i - 1].name} to unlock</span>`;
+        : `<span>Clear the ${LEVELS[i - 1].name} to open this level</span>`;
       return `
         <li>
           <button class="ss-card ss-world-${level.world}" data-level="${i}" ${open ? "" : "disabled"}>
