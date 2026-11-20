@@ -311,10 +311,8 @@ export function draw(
   }
 
   // Vehicles go on top of everything else on the board, so a collision is easy to see.
-  let trotros = 0;
-  level.vehicles?.forEach((v, i) =>
-    drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout, v.kind === "trotro" ? trotros++ : 0),
-  );
+  const count = { trotro: 0, taxi: 0 };
+  level.vehicles?.forEach((v, i) => drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout, count[v.kind]++));
 
   // In slow motion the board gets a pale gold veil at its edges.
   if (isSlow(state) && state.status !== "over") {
@@ -611,8 +609,8 @@ function drawWalls(ctx: CanvasRenderingContext2D, layout: Layout) {
 }
 
 /**
- * Trotro paint jobs: a body color and the kente band down its side. Taxis are always gold, so no
- * trotro is gold, and two trotros on one board get different paint.
+ * Trotro paint jobs: a body color and the kente band down its side. Two trotros on one board get
+ * different paint, and no trotro shares a body color with a taxi.
  */
 export const TROTRO_PAINT: { body: string; band: string[] }[] = [
   { body: "#F7EEDC", band: [K.green, K.red, K.green] },
@@ -622,13 +620,26 @@ export const TROTRO_PAINT: { body: string; band: string[] }[] = [
 ];
 
 /**
+ * Taxi paint jobs: the body, the colored corners, the outline and the windscreen. A black taxi gets
+ * a cream outline and a pale windscreen, so it still stands out on the dark road.
+ */
+export const TAXI_PAINT: { body: string; corners: string; outline: string; glass: string }[] = [
+  { body: K.gold, corners: K.red, outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: K.black, corners: K.gold, outline: K.cream, glass: "rgba(247,238,220,0.6)" },
+  { body: "#E8742A", corners: K.black, outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: "#7B4FA0", corners: K.gold, outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: "#D9577F", corners: K.cream, outline: K.black, glass: "rgba(20,16,16,0.75)" },
+];
+
+/**
  * A vehicle seen from above. A trotro is a minibus painted cream, green, blue or red with a kente
- * band down its side. A taxi is smaller, gold with red corners, like the taxis in Accra. A vehicle
- * that wraps around the edge of the board is drawn in two pieces. `index` counts the trotros on the
- * board, so each one gets its own paint.
+ * band down its side. A taxi is smaller, with colored corners like the taxis in Accra, painted gold,
+ * black, orange, purple or pink. A vehicle that wraps around the edge of the board is drawn in two
+ * pieces. `index` counts the trotros or the taxis on the board, so each one gets its own paint.
  */
 function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[], layout: Layout, index = 0) {
   const paint = TROTRO_PAINT[index % TROTRO_PAINT.length];
+  const taxi = TAXI_PAINT[index % TAXI_PAINT.length];
   const { frame, cell } = layout;
   // Split the cells into runs that sit side by side on the board.
   const runs: Cell[][] = [];
@@ -665,7 +676,7 @@ function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[]
       }
     }
     // Body.
-    ctx.fillStyle = v.kind === "trotro" ? paint.body : K.gold;
+    ctx.fillStyle = v.kind === "trotro" ? paint.body : taxi.body;
     roundRect(ctx, bx, by, bw, bh, cell * 0.18);
     ctx.fill();
     if (v.kind === "trotro") {
@@ -676,8 +687,8 @@ function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[]
         else ctx.fillRect(bx + bw * (0.62 + i * 0.08), by, bw * 0.08, bh);
       });
     } else {
-      // Red corners, as on Ghana's taxis.
-      ctx.fillStyle = K.red;
+      // Colored corners, as on Ghana's taxis.
+      ctx.fillStyle = taxi.corners;
       const c = cell * 0.22;
       ctx.fillRect(bx, by, c, c);
       ctx.fillRect(bx + bw - c, by, c, c);
@@ -686,14 +697,14 @@ function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[]
     }
     // A windscreen on the front piece.
     if (r === 0) {
-      ctx.fillStyle = "rgba(20,16,16,0.75)";
+      ctx.fillStyle = v.kind === "trotro" ? "rgba(20,16,16,0.75)" : taxi.glass;
       const g = cell * 0.22;
       if (forward === "right") ctx.fillRect(bx + bw - g * 1.6, by + bh * 0.18, g, bh * 0.64);
       if (forward === "left") ctx.fillRect(bx + g * 0.6, by + bh * 0.18, g, bh * 0.64);
       if (forward === "down") ctx.fillRect(bx + bw * 0.18, by + bh - g * 1.6, bw * 0.64, g);
       if (forward === "up") ctx.fillRect(bx + bw * 0.18, by + g * 0.6, bw * 0.64, g);
     }
-    ctx.strokeStyle = K.black;
+    ctx.strokeStyle = v.kind === "trotro" ? K.black : taxi.outline;
     ctx.lineWidth = Math.max(1, cell * 0.07);
     roundRect(ctx, bx, by, bw, bh, cell * 0.18);
     ctx.stroke();

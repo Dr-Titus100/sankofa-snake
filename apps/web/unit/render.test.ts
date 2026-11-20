@@ -1,16 +1,25 @@
 // Checks the paint the board gives vehicles and canoes, so players can tell them apart.
 import { describe, expect, it } from "vitest";
 import { LEVELS, newLayout, obstacleKeys } from "../../../packages/core/src";
-import { CANOE_PAINT, TROTRO_PAINT, canoeIndex } from "../src/render";
+import { CANOE_PAINT, TAXI_PAINT, TROTRO_PAINT, canoeIndex } from "../src/render";
 import { KENTE as K } from "../src/logo";
 
 describe("vehicle and canoe paint", () => {
-  it("never paints a trotro gold like a taxi, and gives each trotro its own color", () => {
-    for (const p of TROTRO_PAINT) expect(p.body.toLowerCase()).not.toBe(K.gold.toLowerCase());
-    expect(new Set(TROTRO_PAINT.map((p) => p.body)).size).toBe(TROTRO_PAINT.length);
+  it("gives each trotro and each taxi on a board its own color, with gold and black taxis", () => {
+    const low = (c: string) => c.toLowerCase();
+    const trotros = TROTRO_PAINT.map((p) => low(p.body));
+    const taxis = TAXI_PAINT.map((p) => low(p.body));
+    expect(new Set(trotros).size).toBe(trotros.length);
+    expect(new Set(taxis).size).toBe(taxis.length);
+    expect(taxis).toContain(low(K.gold));
+    expect(taxis).toContain(low(K.black));
+    for (const t of taxis) expect(trotros).not.toContain(t);
+    // A black taxi needs a light outline to show on the dark road.
+    for (const p of TAXI_PAINT) expect(low(p.outline)).not.toBe(low(p.body));
     for (const level of LEVELS) {
-      const trotros = (level.vehicles ?? []).filter((v) => v.kind === "trotro").length;
-      expect(trotros, level.name).toBeLessThanOrEqual(TROTRO_PAINT.length);
+      const count = (kind: string) => (level.vehicles ?? []).filter((v) => v.kind === kind).length;
+      expect(count("trotro"), level.name).toBeLessThanOrEqual(TROTRO_PAINT.length);
+      expect(count("taxi"), level.name).toBeLessThanOrEqual(TAXI_PAINT.length);
     }
   });
 
