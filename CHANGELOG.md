@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.1 (2026-11-20)
 
 - The Sankofa Snake License now covers every version, including those released before 0.10.0, when you get it from this repo or its releases from 20 November 2026 on. Copies given out under the MIT license before that date, and copies passed on from them, keep the MIT rights.
 - The README, the teaching guides and the other Markdown files use plainer wording that names who does each thing. The Reset progress warning now says "You can't undo this."
