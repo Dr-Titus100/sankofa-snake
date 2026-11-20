@@ -176,6 +176,6 @@ The game draws the kente patterns and the Sankofa bird in code. They draw on ken
 
 The Sankofa Snake License. See [LICENSE](LICENSE).
 
-You can copy, change, teach with and share the code for free, as under the MIT license, with two limits. Without Titus's written permission, you can't publish the game or a version of it in an app store, such as the App Store or Google Play, and you can't make a 3D version of it. Titus has plans for both. These limits start with version 0.10.0. Versions up to 0.9.1 came out under the MIT license and keep it.
+You can copy, change, teach with and share the code for free, as under the MIT license, with two limits. Without Titus's written permission, you can't publish the game or a version of it in an app store, such as the App Store or Google Play, and you can't make a 3D version of it. Titus has plans for both. The license covers every version, including those released before 0.10.0 under the MIT license. A copy someone got under the MIT license before 20 November 2026 keeps the rights that license gave for that copy.
 
 The name "Sankofa Snake", the bird logo and the store art stay with the official game, so a copy needs its own name and logo. See [TRADEMARKS.md](TRADEMARKS.md).

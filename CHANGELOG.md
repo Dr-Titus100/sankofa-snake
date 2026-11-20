@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The Sankofa Snake License now covers every version, including those released before 0.10.0, for anyone who gets the code from 20 November 2026 on. A copy someone got under the MIT license before that date keeps the rights that license gave for that copy.
+
 ## 0.10.0 (2026-11-20)
 
 - In the Ocean and the Weaving village, swimming along a current, the way its arrows point, makes the snake 1.5 times as fast. It goes back to its own speed as soon as its head leaves the current. Crossing a current still pushes the snake one square sideways.
