@@ -112,6 +112,30 @@ test("Choose a level and How to play turn gold under the pointer", async ({ page
   }
 });
 
+test("the tabs have solid edges like the other buttons and turn gold under the pointer", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Phones have no hover.");
+  await page.goto("/?seed=1&layout=fixed");
+  const plain = page.getByRole("button", { name: "Choose a level" });
+  const edge = await plain.evaluate((el) => getComputedStyle(el).borderTopColor);
+  await plain.click();
+  for (const name of ["Free play", "Practice"]) {
+    const tab = page.getByRole("button", { name, exact: true });
+    await expect(tab).toHaveCSS("border-top-color", edge);
+    await expect(tab).toHaveCSS("border-top-style", "solid");
+    await tab.hover();
+    await expect(tab).toHaveCSS("background-color", "rgb(242, 183, 5)");
+    await expect(tab).toHaveCSS("color", "rgb(20, 16, 16)");
+  }
+  // The Sound switch has the same edge when it's off.
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("button", { name: "How to play" }).click();
+  const sound = page.getByRole("button", { name: "Sound", exact: true });
+  await sound.click();
+  await expect(sound).toHaveAttribute("aria-pressed", "false");
+  await expect(sound).toHaveCSS("border-top-color", edge);
+  await expect(page.getByRole("button", { name: "Reset progress" })).toHaveCSS("border-top-color", edge);
+});
+
 test("the sound and vibration switches start on and are remembered", async ({ page }) => {
   await listenForSound(page);
   await page.goto("/?seed=1&layout=fixed");

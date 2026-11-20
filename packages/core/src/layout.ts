@@ -256,8 +256,9 @@ interface Lane {
 }
 
 /**
- * New roads, one for each road in the template. With two or more roads, at least one runs across
- * and one runs down, so they cross.
+ * New roads, one for each road in the template. On half of the runs with two or more roads, the
+ * roads all run the same way and never cross. On the other half, at least one runs across and one
+ * runs down, so they cross.
  */
 function placeLanes(level: LevelDef, r: Rand, reserved: Set<string>): Lane[] | null {
   const groups = new Map<string, VehicleDef[]>();
@@ -267,8 +268,31 @@ function placeLanes(level: LevelDef, r: Rand, reserved: Set<string>): Lane[] | n
   }
   const lists = [...groups.values()];
   if (!lists.length) return [];
-  const axes: ("row" | "column")[] = lists.map(() => (r() < 0.5 ? "row" : "column"));
-  if (lists.length >= 2 && axes.every((a) => a === axes[0])) axes[below(r, axes.length)] = axes[0] === "row" ? "column" : "row";
+  const crossing = lists.length >= 2 && r() < 0.5;
+  for (let t = 0; t < 30; t++) {
+    let axes: ("row" | "column")[];
+    if (crossing) {
+      axes = lists.map(() => (r() < 0.5 ? "row" : "column"));
+      if (axes.every((a) => a === axes[0])) axes[below(r, axes.length)] = axes[0] === "row" ? "column" : "row";
+    } else {
+      // All one way. If the roads don't fit that way, such as four roads down a board whose start
+      // zone covers half the columns, the next try turns them the other way.
+      const one: "row" | "column" = (r() < 0.5) !== (t % 2 === 1) ? "row" : "column";
+      axes = lists.map(() => one);
+    }
+    const lanes = laneSet(level, r, reserved, lists, axes);
+    if (lanes) return lanes;
+  }
+  return null;
+}
+
+function laneSet(
+  level: LevelDef,
+  r: Rand,
+  reserved: Set<string>,
+  lists: VehicleDef[][],
+  axes: ("row" | "column")[],
+): Lane[] | null {
   const lanes: Lane[] = [];
   for (let i = 0; i < lists.length; i++) {
     const axis = axes[i];

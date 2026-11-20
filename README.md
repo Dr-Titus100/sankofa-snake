@@ -12,7 +12,7 @@ Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/g
 | 2 | Park | The snake speeds up after every 5 cowries. |
 | 3 | Market | Market stalls block parts of the board, in new places every run. |
 | 4 | City | Solid walls. Hitting the edge of the board ends the run. |
-| 5 | Road | Trotros and taxis drive across the board, and the roads cross each other. Vehicles stop for the snake and for each other, so only the snake's head can hit one. |
+| 5 | Road | Trotros and taxis drive across the board, and on some runs the roads cross. Vehicles stop for the snake and for each other, so only the snake's head can hit one. |
 | 6 | Lab | Power-ups appear for a short time. Slow motion slows the snake down, shrink makes it shorter, and a pass lets it through its own tail once. |
 | 7 | Maze | Narrow corridors with little room to turn, and a new maze every run. |
 | 8 | Ocean | Currents push the snake one square sideways when it swims across them. |
@@ -61,7 +61,7 @@ The rules and the drawing live in separate folders on purpose. `packages/core` d
 
 A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and the Road's trotros and taxis are listed under `vehicles` in `levels/05-road.json`, each with its lane, direction, length and speed. Currents are the arrows `<`, `>`, `^` and `v` in the Ocean's map. The Lab's `powerUps` setting says which power-ups can appear, how often and for how long. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
 
-The map in a level file is a template. `newLayout` in `packages/core/src/layout.ts` takes its obstacle pieces, currents and roads and places them somewhere new for each run. With two or more roads, at least one runs across and one runs down, so they cross. Parallel roads stay at least 4 cells apart, farther than the longest vehicle, so vehicles waiting at a crossing never block each other for good. A level with `"layout": "maze"` gets a new maze, and `"layout": "fixed"` keeps the map exactly as drawn. Add `?layout=fixed` to the game's address to play every level as its file draws it.
+The map in a level file is a template. `newLayout` in `packages/core/src/layout.ts` takes its obstacle pieces, currents and roads and places them somewhere new for each run. With two or more roads, half of the runs have roads that cross and half have roads that all run the same way. Parallel roads stay at least 4 cells apart, farther than the longest vehicle, so vehicles waiting at a crossing never block each other for good. A level with `"layout": "maze"` gets a new maze, and `"layout": "fixed"` keeps the map exactly as drawn. Add `?layout=fixed` to the game's address to play every level as its file draws it.
 
 The cowries land in random places, but the random numbers come from a seed. The same seed always gives the same game, layout included, which the tests and the daily challenge rely on. Add `?seed=42` to the game's address to try it.
 

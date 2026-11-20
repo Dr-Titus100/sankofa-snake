@@ -301,7 +301,7 @@
 .ss-tab {
   min-height: 40px;
   padding: 8px 16px;
-  border: 2px solid rgba(247, 238, 220, 0.35);
+  border: 2px solid var(--ss-cream);
   border-radius: 999px;
   background: transparent;
   color: var(--ss-cream);
@@ -309,8 +309,15 @@
   font-weight: 600;
   cursor: pointer;
 }
-.ss-tab:hover {
-  border-color: var(--ss-gold);
+/* Like every other button, a tab turns gold under the pointer. Phones skip this, because they keep
+   the hover look after a tap. The sound and vibration switches keep their plain look while off, so
+   a switch just turned off never looks on. */
+@media (hover: hover) {
+  .ss-tab:hover:not([data-setting]) {
+    border-color: var(--ss-gold);
+    background: var(--ss-gold);
+    color: var(--ss-black);
+  }
 }
 .ss-tab[aria-pressed="true"] {
   border-color: var(--ss-gold);
