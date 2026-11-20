@@ -14,6 +14,8 @@ describe("vehicle and canoe paint", () => {
     expect(taxis).toContain(low(K.gold));
     expect(taxis).toContain(low(K.black));
     for (const t of taxis) expect(trotros).not.toContain(t);
+    // Every vehicle has red corner lights, so no body may be red.
+    for (const body of [...trotros, ...taxis]) expect(body).not.toBe(low(K.red));
     // A black taxi needs a light outline to show on the dark road.
     for (const p of TAXI_PAINT) expect(low(p.outline)).not.toBe(low(p.body));
     for (const level of LEVELS) {

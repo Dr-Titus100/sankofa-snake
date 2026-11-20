@@ -610,32 +610,33 @@ function drawWalls(ctx: CanvasRenderingContext2D, layout: Layout) {
 
 /**
  * Trotro paint jobs: a body color and the kente band down its side. Two trotros on one board get
- * different paint, and no trotro shares a body color with a taxi.
+ * different paint, and no trotro shares a body color with a taxi. No body is red, so the red
+ * corner lights every vehicle carries always show.
  */
 export const TROTRO_PAINT: { body: string; band: string[] }[] = [
   { body: "#F7EEDC", band: [K.green, K.red, K.green] },
   { body: "#2E8B57", band: [K.gold, K.red, K.gold] },
   { body: "#3D7CC9", band: [K.gold, K.green, K.gold] },
-  { body: "#C8372D", band: [K.gold, K.green, K.gold] },
+  { body: "#B8BCC2", band: [K.green, K.red, K.green] },
 ];
 
 /**
- * Taxi paint jobs: the body, the colored corners, the outline and the windscreen. A black taxi gets
- * a cream outline and a pale windscreen, so it still stands out on the dark road.
+ * Taxi paint jobs: the body, the outline and the windscreen. A black taxi gets a cream outline and
+ * a pale windscreen, so it still stands out on the dark road.
  */
-export const TAXI_PAINT: { body: string; corners: string; outline: string; glass: string }[] = [
-  { body: K.gold, corners: K.red, outline: K.black, glass: "rgba(20,16,16,0.75)" },
-  { body: K.black, corners: K.gold, outline: K.cream, glass: "rgba(247,238,220,0.6)" },
-  { body: "#E8742A", corners: K.black, outline: K.black, glass: "rgba(20,16,16,0.75)" },
-  { body: "#7B4FA0", corners: K.gold, outline: K.black, glass: "rgba(20,16,16,0.75)" },
-  { body: "#D9577F", corners: K.cream, outline: K.black, glass: "rgba(20,16,16,0.75)" },
+export const TAXI_PAINT: { body: string; outline: string; glass: string }[] = [
+  { body: K.gold, outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: K.black, outline: K.cream, glass: "rgba(247,238,220,0.6)" },
+  { body: "#E8742A", outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: "#7B4FA0", outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: "#1E9E9A", outline: K.black, glass: "rgba(20,16,16,0.75)" },
 ];
 
 /**
- * A vehicle seen from above. A trotro is a minibus painted cream, green, blue or red with a kente
- * band down its side. A taxi is smaller, with colored corners like the taxis in Accra, painted gold,
- * black, orange, purple or pink. A vehicle that wraps around the edge of the board is drawn in two
- * pieces. `index` counts the trotros or the taxis on the board, so each one gets its own paint.
+ * A vehicle seen from above, with a red light at each corner like the taxis in Accra. A trotro is a
+ * minibus painted cream, green, blue or silver with a kente band down its side. A taxi is smaller,
+ * painted gold, black, orange, purple or teal. A vehicle that wraps around the edge of the board is
+ * drawn in two pieces. `index` counts the trotros or the taxis on the board, so each one gets its own paint.
  */
 function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[], layout: Layout, index = 0) {
   const paint = TROTRO_PAINT[index % TROTRO_PAINT.length];
@@ -686,15 +687,14 @@ function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[]
         if (v.axis === "row") ctx.fillRect(bx, by + bh * (0.62 + i * 0.08), bw, bh * 0.08);
         else ctx.fillRect(bx + bw * (0.62 + i * 0.08), by, bw * 0.08, bh);
       });
-    } else {
-      // Colored corners, as on Ghana's taxis.
-      ctx.fillStyle = taxi.corners;
-      const c = cell * 0.22;
-      ctx.fillRect(bx, by, c, c);
-      ctx.fillRect(bx + bw - c, by, c, c);
-      ctx.fillRect(bx, by + bh - c, c, c);
-      ctx.fillRect(bx + bw - c, by + bh - c, c, c);
     }
+    // A red light at each corner.
+    ctx.fillStyle = K.red;
+    const c = cell * 0.22;
+    ctx.fillRect(bx, by, c, c);
+    ctx.fillRect(bx + bw - c, by, c, c);
+    ctx.fillRect(bx, by + bh - c, c, c);
+    ctx.fillRect(bx + bw - c, by + bh - c, c, c);
     // A windscreen on the front piece.
     if (r === 0) {
       ctx.fillStyle = v.kind === "trotro" ? "rgba(20,16,16,0.75)" : taxi.glass;
