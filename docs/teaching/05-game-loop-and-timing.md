@@ -21,7 +21,7 @@ The rules give the length of one move in milliseconds with `moveMs` in `packages
 export const moveMs = (state: GameState) => 1000 / speedNow(state);
 ```
 
-`speedNow` is the snake's speed in moves a second. In slow motion it is 60% of the speed, rounded, and never below 3.
+`speedNow` is the snake's speed in moves a second. In slow motion it is 60% of the speed, rounded, and never below 3. While the snake swims along a current, the way the current flows, it is 1.5 times that, rounded.
 
 ## The loop
 

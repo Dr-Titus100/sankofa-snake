@@ -561,7 +561,7 @@ test.describe("on a phone", () => {
     await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "How to play" }).click();
     const rules = page.locator(".ss-list");
-    await expect(rules).toContainText("Steer with the arrow buttons, or swipe on the board");
+    await expect(rules).toContainText("Steer with the arrow buttons under the board, or swipe on the board");
     await expect(rules).toContainText("Tap the board to pause.");
     await expect(rules).not.toContainText("arrow keys");
     await expect(rules).not.toContainText("Space");

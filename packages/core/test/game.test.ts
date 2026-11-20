@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   LEVELS,
+  CURRENT_BOOST,
   createGame,
+  ridingCurrent,
   SHRINK_CELLS,
   SLOW_MOVES,
   key,
@@ -380,12 +382,48 @@ describe("currents", () => {
     expect(tick(state).state.snake[0]).toEqual({ x: 5, y: 2 });
   });
 
-  it("does nothing when the snake swims along it or against it", () => {
+  it("doesn't push the snake when it swims along it or against it", () => {
     const level = testLevel({ map, start: { x: 4, y: 3, dir: "left", length: 1 } });
     expect(validateLevel(level)).toContain("start cell 4,3 is on a current");
     let g = withFood(turn(createGame(level, 1), "left"), 0, 9);
     g = run(g, 2);
     expect(g.snake[0]).toEqual({ x: 2, y: 3 });
+  });
+
+  it("moves faster along the current and goes back to its own speed when it leaves", () => {
+    const level = testLevel({ map, start: { x: 2, y: 3, dir: "right", length: 1 }, speed: { start: 6, step: 0, every: 5, max: 6 } });
+    let g = withFood(turn(createGame(level, 1), "right"), 0, 9);
+    expect(ridingCurrent(g)).toBe(true);
+    expect(speedNow(g)).toBe(Math.round(6 * CURRENT_BOOST));
+    expect(moveMs(g)).toBeCloseTo(1000 / 9);
+    const start = g.elapsedMs;
+    g = tick(g).state;
+    expect(g.snake[0]).toEqual({ x: 3, y: 3 });
+    expect(g.elapsedMs - start).toBeCloseTo(1000 / 9);
+    // Swimming against the current doesn't speed the snake up.
+    expect(ridingCurrent({ ...g, dir: "left" })).toBe(false);
+    expect(speedNow({ ...g, dir: "left" })).toBe(6);
+    // Once the head leaves the current, the snake is back at its own speed.
+    g = tick(turn(g, "down")).state;
+    expect(g.snake[0]).toEqual({ x: 3, y: 4 });
+    expect(ridingCurrent(g)).toBe(false);
+    expect(speedNow(g)).toBe(6);
+  });
+
+  it("doesn't count a snake crossing the current as swimming along it", () => {
+    let g = withFood(turn(createGame(testLevel({ map }), 1), "up"), 0, 9);
+    g = run(g, 1);
+    g = tick(g).state;
+    expect(g.snake[0]).toEqual({ x: 5, y: 3 });
+    expect(g.dir).toBe("up");
+    expect(ridingCurrent(g)).toBe(false);
+    expect(speedNow(g)).toBe(5);
+  });
+
+  it("speeds up slow motion along a current too", () => {
+    const level = testLevel({ map, start: { x: 4, y: 3, dir: "right", length: 1 }, speed: { start: 10, step: 0, every: 5, max: 10 } });
+    const g = { ...turn(createGame(level, 1), "right"), slowUntil: 99 };
+    expect(speedNow(g)).toBe(Math.round(6 * CURRENT_BOOST));
   });
 
   it("blocks a turn back into the neck right after a push", () => {

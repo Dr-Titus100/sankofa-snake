@@ -281,13 +281,13 @@ test("the game makes no network requests", async ({ page }) => {
 test.describe("on a computer", () => {
   test.skip(({ isMobile }) => isMobile, "keyboard play");
 
-  test("the rules talk about keys, not swipes", async ({ page }) => {
+  test("the rules talk about keys first, then how to steer on a phone", async ({ page }) => {
     await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "How to play" }).click();
-    const rules = page.locator(".ss-list");
-    await expect(rules).toContainText("Steer with the arrow keys or W, A, S and D.");
-    await expect(rules).toContainText("Press M to turn the sound off or on.");
-    await expect(rules).not.toContainText("Swipe");
+    const rules = page.locator(".ss-list li").first();
+    await expect(rules).toHaveText("Steer with the arrow keys or W, A, S and D. On a phone, swipe on the board or press the arrow buttons under it.");
+    await expect(page.locator(".ss-list")).toContainText("Press M to turn the sound off or on.");
+    await expect(page.locator(".ss-list")).not.toContainText("Tap the board to pause");
   });
 
   test("the How to play heading shows a focus ring only after keyboard use", async ({ page }) => {
