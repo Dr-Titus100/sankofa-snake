@@ -358,7 +358,83 @@
   background: transparent;
   color: var(--ss-cream);
 }
-/* The How to play heading takes focus when the screen opens, for screen readers, without a ring. */
+/* The How to play heading takes focus when the screen opens, for screen readers. It shows a ring
+   only when the player is moving with the keyboard, so a tap or click doesn't leave it looking selected. */
 .ss-heading:focus {
   outline: none;
+}
+.ss-heading:focus-visible {
+  outline: 3px solid var(--ss-gold);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Progress: the note when the browser won't save, and the reset confirmation */
+.ss-warn {
+  padding: 8px 12px;
+  border: 1px solid var(--ss-gold);
+  border-radius: 10px;
+  color: var(--ss-cream);
+}
+.ss-confirm {
+  max-width: 30em;
+  margin: 12px auto 0;
+  padding: 14px 16px;
+  border: 2px solid var(--ss-red);
+  border-radius: 14px;
+}
+.ss-confirm p {
+  margin: 0;
+}
+.ss-btn.ss-danger {
+  border-color: var(--ss-red);
+  background: var(--ss-red);
+  color: var(--ss-cream);
+}
+.ss-btn.ss-danger:hover:not(:disabled) {
+  border-color: #e0243f;
+  background: #e0243f;
+  color: var(--ss-cream);
+}
+.ss-done:empty {
+  display: none;
+}
+
+/* A phone turned sideways: the board on the left, the score, buttons and hint on the right, so
+   Pause, Sound and Back stay on the screen. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .ss-root {
+    max-width: 960px;
+    padding: 10px 14px;
+  }
+  .ss-game:not([hidden]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(170px, 34%);
+    grid-template-areas:
+      "stage hud"
+      "stage bar"
+      "stage hint";
+    grid-template-rows: auto auto 1fr;
+    column-gap: 16px;
+    align-items: start;
+  }
+  .ss-game .ss-hud {
+    grid-area: hud;
+    margin: 0;
+  }
+  .ss-game .ss-stage {
+    grid-area: stage;
+  }
+  .ss-game .ss-bar {
+    grid-area: bar;
+    margin-top: 8px;
+  }
+  .ss-game .ss-hint {
+    grid-area: hint;
+    margin-top: 8px;
+  }
+  .ss-game .ss-bar .ss-btn {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
 }

@@ -3,6 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The game makes no network requests, so this page allows none. The build fills in the style hash. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'STYLE_HASH'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    />
     <title>Sankofa Snake</title>
     <meta name="description" content="A free snake game in kente colors, with the Sankofa bird as its logo." />
     <link rel="icon" href="sankofa-logo.svg" type="image/svg+xml" />

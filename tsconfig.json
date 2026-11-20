@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["packages/*/src", "packages/*/test", "apps/web/src", "apps/web/test", "playwright.config.ts"]
+  "include": ["packages/*/src", "packages/*/test", "apps/web/src", "apps/web/test", "apps/web/unit", "playwright.config.ts", "vitest.config.ts"]
 }

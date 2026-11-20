@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 (2026-11-20)
+
+- Saved progress is checked when it loads. Scores, stars, streaks and free play bests must be whole numbers in a sensible range, levels must be real levels, and anything else is dropped. A save edited to hold HTML can no longer run code, and a save with 9 stars no longer empties the level list.
+- Every value put into the game's screens is escaped, including the logo's label.
+- The save has a version number, so later releases can change its format without wiping progress. Saves from 0.6 load as they are.
+- Reset progress on How to play deletes scores, stars, cleared levels, the streak and free play bests after a confirmation. The sound and vibration switches stay.
+- The game says so when the browser won't let it save, as in some private windows.
+- The board is drawn only while the snake moves. Waiting, paused and finished boards stay still, and the fixed scenery is drawn once per level. This saves battery on phones.
+- An error on the board shows "Something went wrong" with a button back to the title, instead of a frozen board.
+- `destroy()` removes a game from the page cleanly, and `back()` pauses a run and then goes back one screen at a time, for the Android back button in the phone apps. The script exports the `SankofaSnake` class, and each element keeps its game as `element.sankofaSnake`.
+- On phones, the rules, the hint and the start message talk about swipes and taps, and leave out the keys. On computers they leave out swipes.
+- On a phone turned sideways, the board sits beside the score and buttons, so Pause, Sound and Back stay on the screen.
+- The How to play heading shows a focus ring when you reach it with the keyboard.
+- The daily challenge shows the date in your browser's own format, and says that everyone gets the same challenge on the same date, which starts at midnight on your device.
+- The game's own page has a Content Security Policy that blocks every network request, and a browser test fails if the game makes one.
+- The browser tests also run in WebKit, the engine inside Safari on the iPhone.
+- Swipes use pointer events, which work the same way for fingers, pens and mice. A mouse click on the board doesn't pause.
+- All the game's text is in one file, `apps/web/src/text.ts`, ready for French or Twi later.
+
+### Also in this release
 
 - TRADEMARKS.md keeps the name "Sankofa Snake", the bird logo and the store art for the official game. The code stays under the MIT license.
 - ART.md records how every drawing and sound was made.

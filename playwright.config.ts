@@ -14,5 +14,7 @@ export default defineConfig({
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "phone", use: { ...devices["Pixel 7"] } },
+    // WebKit is the engine inside Safari, the closest thing to an iPhone the test runner has.
+    { name: "iphone", use: { ...devices["iPhone 13"] } },
   ],
 });

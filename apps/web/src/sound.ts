@@ -62,6 +62,14 @@ export class Sound {
     }
   }
 
+  /** Closes the audio, for when the game is removed from the page. A later unlock opens it again. */
+  close() {
+    const ctx = this.ctx;
+    this.ctx = null;
+    this.master = null;
+    if (ctx) void ctx.close().catch(() => {});
+  }
+
   /** Plays the sound and the vibration for one game event. `eaten` sets the pitch of the cowrie note. */
   play(e: GameEvent, eaten = 0) {
     if (this.vibrationOn && Sound.canVibrate) {

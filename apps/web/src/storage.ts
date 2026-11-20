@@ -1,7 +1,10 @@
 // Saves best scores, stars and cleared levels in the browser. Nothing leaves the device.
 // Some browsers block storage (private windows, strict settings), so every read and write
 // is wrapped, and the game still works without it. Progress then lasts only until the page closes.
-import { dayBefore, nextStreak } from "../../../packages/core/src";
+//
+// On the website the game shares storage with every other page, so a save can't be trusted.
+// Every value is checked when it loads. Good values are kept and anything else is dropped.
+import { LEVELS, dayBefore, nextStreak } from "../../../packages/core/src";
 
 export interface LevelProgress {
   best: number;
@@ -43,26 +46,125 @@ const KEY = PROGRESS_KEY;
 /** Sent on window after progress is saved, so other copies of the game on the page can load it. */
 export const SAVED_EVENT = "sankofa-snake:saved";
 
+/**
+ * The version of the save format. Saves from 0.6 and earlier have no version and count as 1.
+ * When the format changes, raise this number and add a step to `migrate`.
+ */
+export const SAVE_VERSION = 2;
+
+/** The highest values a save can hold. Anything above is tampering or damage, and is dropped. */
+export const LIMITS = { score: 1_000_000, cowries: 10_000, streak: 100_000 } as const;
+
+const LEVEL_IDS = new Set(LEVELS.map((l) => l.id));
+const FREE_KEY = /^([a-z]+)-(wrap|walls)$/;
+
+type Raw = Record<string, unknown>;
+
+const isObject = (v: unknown): v is Raw => typeof v === "object" && v !== null && !Array.isArray(v);
+const count = (v: unknown, max: number): v is number => Number.isSafeInteger(v) && (v as number) >= 0 && (v as number) <= max;
+
+/** A real calendar date written as YYYY-MM-DD. */
+export function isDate(v: unknown): v is string {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [y, m, d] = v.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+}
+
+/** Brings a save from an older version up to the current format. */
+function migrate(raw: Raw): Raw {
+  const version = count(raw.version, 1_000) ? raw.version : 1;
+  // Version 1 (0.6 and earlier) has the same fields as version 2, without a version number.
+  // A later format adds its steps here, such as `if (version < 3) raw = toVersion3(raw)`.
+  void version;
+  return raw;
+}
+
+/** Keeps the good values of a saved object and drops the rest. Never throws. */
+export function cleanProgress(input: unknown): Progress {
+  const progress: Progress = { levels: {} };
+  if (!isObject(input)) return progress;
+  const raw = migrate(input);
+
+  if (isObject(raw.levels)) {
+    for (const [id, value] of Object.entries(raw.levels)) {
+      if (!LEVEL_IDS.has(id) || !isObject(value)) continue;
+      progress.levels[id] = {
+        best: count(value.best, LIMITS.score) ? value.best : 0,
+        stars: count(value.stars, 3) ? value.stars : 0,
+        cleared: value.cleared === true,
+      };
+    }
+  }
+
+  const d = raw.daily;
+  if (isObject(d) && isDate(d.date)) {
+    const streak = count(d.streak, LIMITS.streak) ? d.streak : 0;
+    const lastCleared = isDate(d.lastCleared) ? d.lastCleared : undefined;
+    progress.daily = {
+      date: d.date,
+      best: count(d.best, LIMITS.score) ? d.best : 0,
+      cleared: d.cleared === true,
+      // A streak needs the date it was last extended, or it can't be shown or continued.
+      streak: lastCleared ? streak : 0,
+      bestStreak: Math.max(count(d.bestStreak, LIMITS.streak) ? d.bestStreak : 0, lastCleared ? streak : 0),
+    };
+    if (lastCleared) progress.daily.lastCleared = lastCleared;
+  }
+
+  if (isObject(raw.free)) {
+    const free: Record<string, number> = {};
+    for (const [k, v] of Object.entries(raw.free)) {
+      const m = FREE_KEY.exec(k);
+      if (m && LEVEL_IDS.has(m[1]) && count(v, LIMITS.cowries)) free[k] = v;
+    }
+    if (Object.keys(free).length) progress.free = free;
+  }
+
+  if (isObject(raw.settings)) {
+    const s = raw.settings;
+    progress.settings = { sound: s.sound !== false, vibration: s.vibration !== false };
+  }
+  return progress;
+}
+
 export function loadProgress(): Progress {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Progress;
-      if (parsed && typeof parsed.levels === "object") return parsed;
-    }
+    if (raw) return cleanProgress(JSON.parse(raw));
   } catch {
     // Storage is blocked or the saved data is damaged. Start fresh.
   }
   return { levels: {} };
 }
 
-export function saveProgress(progress: Progress): void {
+/** Saves progress. Returns false when the browser won't keep it. */
+export function saveProgress(progress: Progress): boolean {
   try {
-    localStorage.setItem(KEY, JSON.stringify(progress));
+    localStorage.setItem(KEY, JSON.stringify({ version: SAVE_VERSION, ...progress }));
     window.dispatchEvent(new Event(SAVED_EVENT));
+    return true;
   } catch {
-    // Storage is blocked. Progress lasts until the page closes.
+    // Storage is blocked or full. Progress lasts until the page closes.
+    return false;
   }
+}
+
+/** Whether this browser lets the game save. Private windows and strict settings can block it. */
+export function canSave(): boolean {
+  try {
+    const probe = `${KEY}/probe`;
+    localStorage.setItem(probe, "1");
+    localStorage.removeItem(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Deletes scores, stars, cleared levels, the daily streak and free play bests. Keeps the switches. */
+export function resetProgress(progress: Progress): Progress {
+  return progress.settings ? { levels: {}, settings: progress.settings } : { levels: {} };
 }
 
 /** Records a finished run and returns the updated progress. */

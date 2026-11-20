@@ -77,7 +77,7 @@ test("the daily challenge is the same for everyone on a date and shows the strea
   }, SAVE_KEY);
   await page.goto("/?seed=1");
   await page.getByRole("button", { name: "Daily challenge" }).click();
-  await expect(page.getByText(/Thursday 19 November/)).toBeVisible();
+  await expect(page.getByText(/Thursday, November 19\. Everyone gets the same challenge on the same date\./)).toBeVisible();
   // Yesterday's clear keeps the streak going until today's challenge is played.
   await expect(page.locator(".ss-streak")).toHaveText("Streak: 3 days. Longest: 5 days.");
   await expect(page.getByText("Today's best 0")).toBeVisible();
@@ -189,10 +189,11 @@ test("a play view and a help view on one page, or in two tabs, share switches an
     localStorage.setItem(key, JSON.stringify({ ...saved, levels: { farm: { best: 300, stars: 2, cleared: true } } }));
   }, SAVE_KEY);
   await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).levels.farm?.cleared, SAVE_KEY)).toBe(true);
-  await help.getByRole("button", { name: "Vibration", exact: true }).click();
+  // Sound, since iPhones have no Vibration switch.
+  await help.getByRole("button", { name: "Sound", exact: true }).click();
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), SAVE_KEY);
   expect(saved.levels.farm).toEqual({ best: 300, stars: 2, cleared: true });
-  expect(saved.settings).toEqual({ sound: false, vibration: false });
+  expect(saved.settings).toEqual({ sound: true, vibration: true });
 });
 
 test("only the first level is open on a first visit", async ({ page }) => {
@@ -217,7 +218,7 @@ test.describe("on a computer", () => {
   test("the snake starts on an arrow key and pauses on Space", async ({ page }) => {
     await page.goto("/?seed=1");
     await page.getByRole("button", { name: "Play", exact: true }).click();
-    await expect(page.locator("[data-overlay]").getByText("Press an arrow key or swipe to start.")).toBeVisible();
+    await expect(page.locator("[data-overlay]").getByText("Press an arrow key to start.")).toBeVisible();
     await page.keyboard.press("ArrowUp");
     await expect(page.locator("[data-overlay]")).toBeHidden();
     await page.keyboard.press("p");
@@ -252,7 +253,7 @@ test.describe("on a computer", () => {
     await expect(page.locator("[data-overlay]").getByText("Game over")).toBeVisible();
     await expect(page.locator("[data-overlay]").getByText("The snake ran into a market stall.")).toBeVisible();
     await page.getByRole("button", { name: "Play again" }).click();
-    await expect(page.locator("[data-overlay]").getByText("Press an arrow key or swipe to start.")).toBeVisible();
+    await expect(page.locator("[data-overlay]").getByText("Press an arrow key to start.")).toBeVisible();
   });
 
   test("a crash plays a sound and buzzes, and M turns the sound off", async ({ page }) => {
@@ -418,20 +419,58 @@ test.describe("on a phone", () => {
   test("a swipe starts the snake and a tap pauses it", async ({ page }) => {
     await page.goto("/?seed=1");
     await page.getByRole("button", { name: "Play", exact: true }).click();
+    await expect(page.locator("[data-overlay]").getByText("Swipe to start.")).toBeVisible();
     const stage = page.locator("[data-stage]");
     const box = (await stage.boundingBox())!;
-    const touch = (type: string, x: number, y: number) =>
-      stage.dispatchEvent(type, {
-        touches: type === "touchend" ? [] : [{ identifier: 1, clientX: x, clientY: y }],
-        changedTouches: [{ identifier: 1, clientX: x, clientY: y }],
-      });
     const cx = box.x + box.width / 2;
     const cy = box.y + box.height / 2;
-    await touch("touchstart", cx, cy);
-    await touch("touchend", cx, cy - 80);
+    await swipe(page, cx, cy, cx, cy - 80);
     await expect(page.locator("[data-overlay]")).toBeHidden();
-    await touch("touchstart", cx, cy);
-    await touch("touchend", cx, cy);
+    await swipe(page, cx, cy, cx, cy);
     await expect(page.locator("[data-overlay]").getByText("Paused", { exact: true })).toBeVisible();
   });
+
+  test("the rules and the hint talk about swipes and taps, not keys", async ({ page }) => {
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "How to play" }).click();
+    const rules = page.locator(".ss-list");
+    await expect(rules).toContainText("Swipe on the board");
+    await expect(rules).toContainText("Tap the board to pause.");
+    await expect(rules).not.toContainText("arrow keys");
+    await expect(rules).not.toContainText("Space");
+    await expect(rules).not.toContainText("Press M");
+    await page.getByRole("button", { name: "Back" }).click();
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    await expect(page.locator(".ss-hint")).toHaveText("Swipe on the board to steer. Tap the board to pause.");
+  });
+
+  test("turned sideways, Pause, Sound and Back stay on the screen", async ({ page }) => {
+    await page.setViewportSize({ width: 740, height: 360 });
+    await page.goto("/?seed=1");
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    for (const name of ["Pause", "Sound", "Back"]) {
+      const box = (await page.locator(".ss-bar").getByRole("button", { name }).boundingBox())!;
+      expect(box.y + box.height, name).toBeLessThanOrEqual(360);
+      expect(box.x + box.width, name).toBeLessThanOrEqual(740);
+    }
+    const board = (await page.locator("canvas").boundingBox())!;
+    expect(board.y + board.height).toBeLessThanOrEqual(360);
+    expect(board.height).toBeGreaterThanOrEqual(200);
+  });
 });
+
+/** A finger swipe on the page, sent as pointer events the way a touch screen sends them. */
+async function swipe(page: Page, x1: number, y1: number, x2: number, y2: number) {
+  await page.locator("[data-stage]").evaluate(
+    (el, [ax, ay, bx, by]) => {
+      const send = (type: string, x: number, y: number) =>
+        el.dispatchEvent(
+          new PointerEvent(type, { bubbles: true, pointerId: 7, pointerType: "touch", isPrimary: true, clientX: x, clientY: y }),
+        );
+      send("pointerdown", ax, ay);
+      send("pointermove", (ax + bx) / 2, (ay + by) / 2);
+      send("pointerup", bx, by);
+    },
+    [x1, y1, x2, y2],
+  );
+}

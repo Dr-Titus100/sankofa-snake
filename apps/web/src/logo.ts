@@ -15,7 +15,10 @@ export function sankofaLogo(size = 120, title = "Sankofa bird"): string {
   const k = KENTE;
   // Each copy of the logo needs its own clip id, or a second copy on the page would borrow the first one's.
   const clip = `ss-body-${++logoCount}`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="${title}">
+  // The label goes inside an attribute, so it is escaped like any other text put into HTML.
+  const label = title.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const px = Math.max(1, Math.round(Number(size) || 120));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${px}" height="${px}" role="img" aria-label="${label}">
   <defs>
     <clipPath id="${clip}"><path d="M28 60C28 44 46 36 63 42C77 47 82 60 74 70C66 79 45 81 34 74C30 71 28 66 28 60Z"/></clipPath>
   </defs>

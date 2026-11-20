@@ -30,10 +30,12 @@ Practice opens every level at a slower, steady speed. Running into something onl
 
 ## Controls
 
-- Arrow keys or W, A, S and D steer. On a phone, swipe.
+- Arrow keys or W, A, S and D steer. On a phone, swipe on the board. Swipes work with a finger, a pen or a mouse.
 - Space, P or Escape pauses. On a phone, tap the board.
 - M turns the sound off or on. The How to play screen has switches for sound and for vibration on phones that support it.
 - The game pauses on its own when you switch tabs or apps.
+- On a phone, the rules and hints talk about swipes and taps, and leave out the keys.
+- Reset progress on the How to play screen deletes your scores, stars, cleared levels, streak and free play bests after it asks you to confirm. The sound and vibration switches stay.
 
 ## Sound and vibration
 
@@ -48,7 +50,7 @@ The [teaching guides](docs/teaching/README.md) use the game's code to teach prog
 ```text
 packages/core/   the rules in TypeScript, with no drawing, and their unit tests
 levels/          one data file per level: size, edges, speed, goal and obstacles
-apps/web/        the canvas game, its styles and its browser tests
+apps/web/        the canvas game, its styles, its words in text.ts, and its tests
 scripts/         the build script
 docs/teaching/   lesson guides with exercises
 ```
@@ -61,13 +63,13 @@ The cowries land in random places, but the random numbers come from a seed. The 
 
 ## Working on it
 
-You need Node.js 22 and Python 3 (the browser tests use Python's small web server).
+You need Node.js 22 and Python 3 (the browser tests use Python's small web server). The browser tests need Chromium and WebKit: `npx playwright install chromium webkit`.
 
 ```sh
 npm install
-npm test            # unit tests for the rules
+npm test            # unit tests for the rules and for reading saved progress
 npm run build       # builds dist/
-npm run test:e2e    # plays the built game in a desktop and a phone browser
+npm run test:e2e    # plays the built game in a desktop browser, an Android phone and an iPhone (WebKit)
 npm run dev         # rebuilds on every change at http://localhost:5173
 ```
 
@@ -80,6 +82,20 @@ npm run dev         # rebuilds on every change at http://localhost:5173
 ```
 
 Give the attribute the value `play` to leave out the How to play button, or `help` to show only the rules and the sound and vibration switches. A site can use the two to put the rules on a tab of their own, the way titusnyarkonde.com does.
+
+Each element keeps its game as `element.sankofaSnake`, and the script also exports the `SankofaSnake` class, so a page or an app can control it:
+
+```js
+import { SankofaSnake } from "./sankofa-snake.js";
+
+const game = new SankofaSnake(document.querySelector("#game"));
+game.back();    // pauses a run, then goes back one screen. Returns false on the title screen.
+game.destroy(); // stops the board, closes the sound and removes every listener
+```
+
+The phone apps call `back()` from the Android back button and close only when it returns false.
+
+All the text the game shows or says is in `apps/web/src/text.ts`, ready for a translation. The level names and challenges are in the level files.
 
 ### Packages and install scripts
 
@@ -96,7 +112,9 @@ The release workflow tests and builds the game, then attaches the built files to
 
 ## Privacy
 
-The game keeps scores, progress and the daily streak in your browser's local storage. It sends nothing to any server and has no ads or trackers.
+The game keeps scores, progress, the daily streak and the sound and vibration switches in your browser's local storage. It sends nothing to any server and has no ads or trackers. Its own page has a Content Security Policy that blocks every network request, and a browser test fails if the game ever makes one.
+
+On a website the game shares storage with every other page, so it checks every saved value when it loads and drops anything that doesn't fit, such as a score that isn't a whole number or more than 3 stars. The save carries a version number, so a later release can change the format without losing anyone's progress. If the browser won't let the game save, as in some private windows, the game says so.
 
 ## Credits
 
