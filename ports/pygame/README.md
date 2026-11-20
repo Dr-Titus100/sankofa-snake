@@ -4,7 +4,7 @@ The full game in a window, written in Python with Pygame. It plays exactly like 
 
 ## Play
 
-You need Python 3.10 or newer.
+You need Python 3.10 or newer. `requirements.txt` installs pygame-ce, the community edition of Pygame, which has ready-made builds for every recent Python, 3.14 included. The game runs on the original pygame package too.
 
 ```sh
 cd ports/pygame
