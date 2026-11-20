@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The Sankofa Snake License now covers every version, including those released before 0.10.0, for anyone who gets the code from 20 November 2026 on. A copy someone got under the MIT license before that date keeps the rights that license gave for that copy.
+- The Sankofa Snake License now covers every version, including those released before 0.10.0, when you get it from this repo or its releases from 20 November 2026 on. Copies given out under the MIT license before that date, and copies passed on from them, keep the MIT rights.
 
 ## 0.10.0 (2026-11-20)
 
