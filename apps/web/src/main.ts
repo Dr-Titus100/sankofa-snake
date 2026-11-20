@@ -1,5 +1,6 @@
 // Starts the game in every element marked with data-sankofa-snake.
-// Add ?seed=123 to the page address to place the cowries the same way every time.
+// Add ?seed=123 to the page address to place the cowries and the layout the same way every time.
+// Add ?layout=fixed to play every level exactly as its file in the levels/ folder draws it.
 // The module also exports SankofaSnake and start(), and each element keeps its game as
 // element.sankofaSnake, so a page or app can call game.back() or game.destroy().
 // data-sankofa-snake="play" leaves out the How to play button, and data-sankofa-snake="help" shows
@@ -13,6 +14,7 @@ export type { Options } from "./app";
 export function start() {
   const param = new URLSearchParams(location.search).get("seed");
   const seed = param !== null && /^\d+$/.test(param) ? Number(param) : undefined;
+  const layout = new URLSearchParams(location.search).get("layout") === "fixed" ? "fixed" : "new";
   document.querySelectorAll<HTMLElement>("[data-sankofa-snake]").forEach((el) => {
     if (!el.dataset.ssStarted) {
       el.dataset.ssStarted = "true";
@@ -20,6 +22,7 @@ export function start() {
       // The element keeps its game, so a page or app can call back() or destroy() on it.
       (el as HTMLElement & { sankofaSnake?: SankofaSnake }).sankofaSnake = new SankofaSnake(el, {
         seed,
+        layout,
         view: view === "play" || view === "help" ? view : "full",
       });
     }

@@ -4,7 +4,7 @@ Students learn where a computer's random numbers come from, what a seed is, and 
 
 ## Start by playing
 
-Open the game twice, in two tabs, with `?seed=7` at the end of the address. The first cowrie lands in the same place in both. Then try `?seed=8`.
+Open the game twice, in two tabs, with `?seed=7` at the end of the address. The first cowrie lands in the same place in both, and on the Market the stalls stand in the same places too. Then try `?seed=8`.
 
 ## Computers fake randomness
 

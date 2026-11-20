@@ -100,6 +100,12 @@ export interface LevelDef {
   powerUps?: PowerUpRule;
   /** In practice, running into something stops the snake instead of ending the run. */
   practice?: boolean;
+  /**
+   * How a new layout is made for each run. "shuffle", the default, places the map's obstacle
+   * pieces, currents and roads in new random spots. "maze" builds a new maze. "fixed" keeps the
+   * map exactly as written.
+   */
+  layout?: "shuffle" | "maze" | "fixed";
 }
 
 export type Status = "ready" | "running" | "paused" | "over" | "cleared";

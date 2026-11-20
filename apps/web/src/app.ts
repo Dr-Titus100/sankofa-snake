@@ -9,12 +9,15 @@ import {
   dateKey,
   freePlayLevel,
   isSlow,
+  layoutSeed,
   moveMs,
+  newLayout,
   pause,
   tick,
   togglePause,
   practiceLevel,
   turn,
+  type Direction,
   type Edges,
   type GameEvent,
   type LevelDef,
@@ -63,6 +66,11 @@ export interface Options {
    * switches, for that tab.
    */
   view?: "full" | "play" | "help";
+  /**
+   * "fixed" keeps every level exactly as its file draws it. Otherwise each run places the
+   * obstacles, currents and roads somewhere new, and the Maze is a new maze.
+   */
+  layout?: "new" | "fixed";
 }
 
 export class SankofaSnake {
@@ -102,6 +110,8 @@ export class SankofaSnake {
     this.sound = new Sound(settings.sound, settings.vibration);
     const signal = this.listeners.signal;
     root.classList.add("ss-root");
+    // Phones and tablets get the arrow pad, and the layout makes room for it.
+    root.classList.toggle("ss-touch", this.input === "touch");
     // A page can hold more than one copy of the game, such as a play view and a help view, and a player
     // can have the game open in two tabs. Each copy loads progress again whenever another one saves, so
     // a stale copy never writes over newer scores or switches.
@@ -186,7 +196,7 @@ export class SankofaSnake {
     this.resizer?.disconnect();
     this.sound.close();
     this.root.innerHTML = "";
-    this.root.classList.remove("ss-root");
+    this.root.classList.remove("ss-root", "ss-touch");
     delete this.root.dataset.ssStarted;
     delete (this.root as HTMLElement & { sankofaSnake?: unknown }).sankofaSnake;
   }
@@ -203,8 +213,18 @@ export class SankofaSnake {
     if (screen === "levels") this.renderLevels();
     if (screen === "daily") this.renderDaily();
     if (screen !== "game") this.stopLoop();
+    this.reveal();
     const first = this.root.querySelector<HTMLElement>(`[data-screen="${screen}"] [data-focus]`);
     first?.focus();
+  }
+
+  /**
+   * A new screen can be much shorter than the one before. When the level list was scrolled down, the
+   * page would then show whatever sits below the game. Scrolling back to the top of the game keeps
+   * the new screen in view. A page with a sticky header can set --ss-scroll-margin to clear it.
+   */
+  private reveal() {
+    if (this.root.getBoundingClientRect().top < 0) this.root.scrollIntoView({ block: "start" });
   }
 
   /** A note shown when the browser won't keep progress. */
@@ -405,10 +425,13 @@ export class SankofaSnake {
         <canvas class="ss-canvas" role="img" aria-label="${esc(h.board)}"></canvas>
         <div class="ss-overlay" data-overlay></div>
       </div>
-      <div class="ss-actions ss-bar">
-        <button class="ss-btn" data-pause>${esc(b.pause)}</button>
-        <button class="ss-btn ss-toggle" data-setting="sound">${esc(b.sound)}</button>
-        <button class="ss-btn" data-back>${esc(b.back)}</button>
+      <div class="ss-controls${this.input === "touch" ? " ss-with-pad" : ""}">
+        <div class="ss-actions ss-bar">
+          <button class="ss-btn" data-pause>${esc(b.pause)}</button>
+          <button class="ss-btn ss-toggle" data-setting="sound">${esc(b.sound)}</button>
+          <button class="ss-btn" data-back>${esc(b.back)}</button>
+        </div>
+        ${this.input === "touch" ? padHtml() : ""}
       </div>
       <p class="ss-note ss-hint">${esc(h.hint[this.input])}</p>`;
     const signal = this.listeners.signal;
@@ -419,6 +442,24 @@ export class SankofaSnake {
     listenForSwipes(stage, (c) => this.command(c), signal);
     // A swipe steers during pointermove, which iPhones don't count as a press for sound. The end of the touch does count.
     stage.addEventListener("pointerup", () => this.sound.unlock(), { signal });
+    el.querySelectorAll<HTMLButtonElement>("[data-dir]").forEach((button) => {
+      const dir = button.dataset.dir as Direction;
+      // The snake turns as soon as a finger touches an arrow, without waiting for it to lift.
+      // preventDefault keeps a quick second tap from zooming the page.
+      button.addEventListener(
+        "pointerdown",
+        (e) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          e.preventDefault();
+          this.command({ type: "turn", dir });
+        },
+        { signal },
+      );
+      // A keyboard or a switch presses the button with a click that has no pointer before it.
+      button.addEventListener("click", (e) => e.detail === 0 && this.command({ type: "turn", dir }), { signal });
+      // iPhones allow sound only after the end of a touch.
+      button.addEventListener("pointerup", () => this.sound.unlock(), { signal });
+    });
     el.querySelector("[data-back]")!.addEventListener("click", () => this.leaveRun());
     el.querySelector("[data-setting]")!.addEventListener("click", () => this.toggleSetting("sound"));
     this.syncSettings();
@@ -528,6 +569,9 @@ export class SankofaSnake {
     } else if (mode === "free") level = freePlayLevel(LEVELS[i], this.freeEdges);
     else if (mode === "practice") level = practiceLevel(LEVELS[i]);
     else level = LEVELS[i];
+    // A new layout for every run. The daily challenge's seed comes from the date, so everyone
+    // gets the same layout on the same day.
+    if (this.options.layout !== "fixed") level = newLayout(level, layoutSeed(seed));
     this.levelIndex = i;
     this.stopLoop();
     this.state = createGame(level, seed);
@@ -791,7 +835,7 @@ export class SankofaSnake {
     // On a phone turned sideways they sit beside the board, so the board can use nearly the full height.
     let chrome = 48;
     if (!window.matchMedia?.(SIDEWAYS).matches) {
-      for (const sel of [".ss-hud", ".ss-bar", ".ss-hint"]) chrome += game.querySelector<HTMLElement>(sel)?.offsetHeight ?? 0;
+      for (const sel of [".ss-hud", ".ss-controls", ".ss-hint"]) chrome += game.querySelector<HTMLElement>(sel)?.offsetHeight ?? 0;
       chrome += 40;
     }
     const height = Math.max(200, window.innerHeight - chrome);
@@ -810,4 +854,21 @@ export class SankofaSnake {
     const live = this.root.querySelector<HTMLElement>("[data-live]");
     if (live) live.textContent = text;
   }
+}
+
+const ARROW: Record<Direction, string> = {
+  up: "M12 5 L20 17 H4 Z",
+  down: "M12 19 L4 7 H20 Z",
+  left: "M5 12 L17 4 V20 Z",
+  right: "M19 12 L7 20 V4 Z",
+};
+
+/** The arrow buttons for phones and tablets, laid out as a cross. */
+function padHtml(): string {
+  const p = TEXT.pad;
+  const button = (dir: Direction) => `
+    <button class="ss-pad-btn ss-pad-${dir}" type="button" data-dir="${dir}" aria-label="${esc(p[dir])}">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${ARROW[dir]}"/></svg>
+    </button>`;
+  return `<div class="ss-pad" role="group" aria-label="${esc(p.label)}">${(["up", "left", "right", "down"] as Direction[]).map(button).join("")}</div>`;
 }

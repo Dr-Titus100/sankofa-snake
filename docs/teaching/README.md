@@ -39,7 +39,7 @@ If installing software isn't possible, students can still play the game at [titu
 
 - Practice mode suits demonstrations. The snake moves slowly, and running into something only stops it, so you can steer while you talk without the run ending.
 - The daily challenge makes a quick warm-up. Everyone gets the same board that day, so students can compare scores and strategies.
-- A fixed seed puts the cowries in the same places for everyone. Add `?seed=42` to the game's address, and every student sees the same first cowrie.
+- A fixed seed puts the cowries, stalls, roads and currents in the same places for everyone. Add `?seed=42` to the game's address, and every student sees the same board. Add `?layout=fixed` to play every level exactly as its file draws it.
 - You can turn the sound off with the M key or on the How to play screen, which helps in a quiet room.
 
 ## Project ideas

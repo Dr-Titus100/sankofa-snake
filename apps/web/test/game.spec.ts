@@ -58,7 +58,7 @@ function watchErrors(page: Page) {
 
 test("the title screen shows the logo and the four buttons", async ({ page }) => {
   const errors = watchErrors(page);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await expect(page.getByRole("heading", { name: "Sankofa Snake", level: 2 })).toBeVisible();
   await expect(page.getByRole("img", { name: /Sankofa bird/ })).toBeVisible();
   for (const name of ["Play", "Daily challenge", "Choose a level", "How to play"]) {
@@ -75,7 +75,7 @@ test("the daily challenge is the same for everyone on a date and shows the strea
       JSON.stringify({ levels: {}, daily: { date: "2026-11-18", best: 400, cleared: true, streak: 3, lastCleared: "2026-11-18", bestStreak: 5 } }),
     );
   }, SAVE_KEY);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "Daily challenge" }).click();
   await expect(page.getByText(/Thursday, November 19\. Everyone gets the same challenge on the same date\./)).toBeVisible();
   // Yesterday's clear keeps the streak going until today's challenge is played.
@@ -90,7 +90,7 @@ test("the daily challenge is the same for everyone on a date and shows the strea
 
 test("free play lists only the worlds already opened", async ({ page }) => {
   await unlockAll(page);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "Choose a level" }).click();
   await page.getByRole("button", { name: "Free play", exact: true }).click();
   await expect(page.getByRole("button", { name: "Free play", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -102,7 +102,7 @@ test("free play lists only the worlds already opened", async ({ page }) => {
 
 test("Choose a level and How to play turn gold under the pointer", async ({ page, isMobile }) => {
   test.skip(isMobile, "Phones have no hover.");
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   for (const name of ["Choose a level", "How to play"]) {
     const button = page.getByRole("button", { name, exact: true });
     await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
@@ -114,7 +114,7 @@ test("Choose a level and How to play turn gold under the pointer", async ({ page
 
 test("the sound and vibration switches start on and are remembered", async ({ page }) => {
   await listenForSound(page);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "How to play" }).click();
   const sound = page.getByRole("button", { name: "Sound", exact: true });
   const vibration = page.getByRole("button", { name: "Vibration", exact: true });
@@ -133,7 +133,7 @@ test("the sound and vibration switches start on and are remembered", async ({ pa
 });
 
 test("How to play opens with its heading in focus and a plain Back button", async ({ page }) => {
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "How to play" }).click();
   await expect(page.getByRole("heading", { name: "How to play" })).toBeFocused();
   const back = page.getByRole("button", { name: "Back" });
@@ -149,7 +149,7 @@ async function viewPage(page: Page, view: string) {
       body: `<!doctype html><link rel="stylesheet" href="/sankofa-snake.css"><div data-sankofa-snake="${view}"></div><script type="module" src="/sankofa-snake.js"></script>`,
     }),
   );
-  await page.goto("/view-test.html?seed=1");
+  await page.goto("/view-test.html?seed=1&layout=fixed");
 }
 
 test("the play view leaves out How to play, and the help view shows only the rules and switches", async ({ page }) => {
@@ -172,7 +172,7 @@ test("a play view and a help view on one page, or in two tabs, share switches an
       body: `<!doctype html><link rel="stylesheet" href="/sankofa-snake.css"><div id="play" data-sankofa-snake="play"></div><div id="help" data-sankofa-snake="help"></div><script type="module" src="/sankofa-snake.js"></script>`,
     }),
   );
-  await page.goto("/both-views.html?seed=1");
+  await page.goto("/both-views.html?seed=1&layout=fixed");
   const help = page.locator("#help");
   const play = page.locator("#play");
   await help.getByRole("button", { name: "Sound", exact: true }).click();
@@ -183,7 +183,7 @@ test("a play view and a help view on one page, or in two tabs, share switches an
 
   // Another tab clears a level. Turning a switch here afterward keeps that progress.
   const other = await context.newPage();
-  await other.goto("/?seed=1");
+  await other.goto("/?seed=1&layout=fixed");
   await other.evaluate((key) => {
     const saved = JSON.parse(localStorage.getItem(key) || "{}");
     localStorage.setItem(key, JSON.stringify({ ...saved, levels: { farm: { best: 300, stars: 2, cleared: true } } }));
@@ -197,7 +197,7 @@ test("a play view and a help view on one page, or in two tabs, share switches an
 });
 
 test("only the first level is open on a first visit", async ({ page }) => {
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "Choose a level" }).click();
   await expect(page.locator("[data-level='0']")).toBeEnabled();
   await expect(page.locator("[data-level='1']")).toBeDisabled();
@@ -206,7 +206,7 @@ test("only the first level is open on a first visit", async ({ page }) => {
 
 test("a cleared level unlocks the next one", async ({ page }) => {
   await unlockAll(page);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "Choose a level" }).click();
   await expect(page.locator("[data-level='2']")).toBeEnabled();
   await expect(page.locator("[data-level='0']")).toContainText("Best 300");
@@ -216,7 +216,7 @@ test.describe("on a computer", () => {
   test.skip(({ isMobile }) => isMobile, "keyboard play");
 
   test("the snake starts on an arrow key and pauses on Space", async ({ page }) => {
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Play", exact: true }).click();
     await expect(page.locator("[data-overlay]").getByText("Press an arrow key to start.")).toBeVisible();
     await page.keyboard.press("ArrowUp");
@@ -228,7 +228,7 @@ test.describe("on a computer", () => {
   });
 
   test("the game pauses when the tab is hidden", async ({ page }) => {
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Play", exact: true }).click();
     await page.keyboard.press("ArrowUp");
     await page.evaluate(() => {
@@ -241,7 +241,7 @@ test.describe("on a computer", () => {
   test("running into a market stall ends the run", async ({ page }) => {
     await page.clock.install();
     await unlockAll(page);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='2']").click();
     // The Market starts at 7 moves a second, about 143 ms a move. The head starts at column 5, row 10.
@@ -260,7 +260,7 @@ test.describe("on a computer", () => {
     await listenForSound(page);
     await page.clock.install();
     await unlockAll(page);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='2']").click();
     // The same path as the market stall test above.
@@ -286,7 +286,7 @@ test.describe("on a computer", () => {
   test("in the City, the edge of the board is a wall", async ({ page }) => {
     await page.clock.install();
     await openUpTo(page, ["farm", "park", "market"]);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='3']").click();
     // The City runs at 7 moves a second. The head starts at row 10 in an open column, so 11 moves up hit the top wall.
@@ -298,7 +298,7 @@ test.describe("on a computer", () => {
   test("on the Road, running into a taxi ends the run", async ({ page }) => {
     await page.clock.install();
     await openUpTo(page, ["farm", "park", "market", "city"]);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='4']").click();
     // The Road runs at 6 moves a second, about 167 ms a move. Six moves right and then three up
@@ -312,7 +312,7 @@ test.describe("on a computer", () => {
 
   test("the Lab explains its power-ups before the run starts", async ({ page }) => {
     await openUpTo(page, ["farm", "park", "market", "city", "road"]);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='5']").click();
     await expect(page.locator("[data-overlay]").getByText(/Power-ups appear on the board/)).toBeVisible();
@@ -323,7 +323,7 @@ test.describe("on a computer", () => {
   test("in the Maze, running into a wall ends the run", async ({ page }) => {
     await page.clock.install();
     await openUpTo(page, ["farm", "park", "market", "city", "road", "lab"]);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='6']").click();
     // The Maze runs at 6 moves a second. The head starts at column 6, row 9, and a wall stands at column 10.
@@ -335,7 +335,7 @@ test.describe("on a computer", () => {
   test("in the Ocean, a current carries the snake past a canoe", async ({ page }) => {
     await page.clock.install();
     await openUpTo(page, ["farm", "park", "market", "city", "road", "lab", "maze"]);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='7']").click();
     // The head starts at column 5, row 10, heading up a column with a canoe in row 3. The current
@@ -347,7 +347,7 @@ test.describe("on a computer", () => {
 
   test("in free play with walls, the run ends at the edge and counts the cowries", async ({ page }) => {
     await page.clock.install();
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.getByRole("button", { name: "Free play", exact: true }).click();
     await page.getByRole("button", { name: "Walls", exact: true }).click();
@@ -364,7 +364,7 @@ test.describe("on a computer", () => {
 
   test("in practice, hitting the wall only stops the snake", async ({ page }) => {
     await page.clock.install();
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.getByRole("button", { name: "Practice", exact: true }).click();
     await page.locator("[data-level='3']").click();
@@ -381,7 +381,7 @@ test.describe("on a computer", () => {
 
   test("the Weaving village says it has every challenge at once", async ({ page }) => {
     await openUpTo(page, ["farm", "park", "market", "city", "road", "lab", "maze", "ocean"]);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await expect(page.locator("[data-level='8']")).toBeEnabled();
     await page.locator("[data-level='8']").click();
@@ -389,11 +389,89 @@ test.describe("on a computer", () => {
   });
 });
 
+/** The map of the run being played, read from the game the page keeps on its element. */
+const runMap = (page: Page) =>
+  page.evaluate(() => {
+    const el = document.querySelector("[data-sankofa-snake]") as HTMLElement & { sankofaSnake: { state: { level: { map?: string[] } } } };
+    return el.sankofaSnake.state.level.map;
+  });
+
+test.describe("new layouts", () => {
+  test("each run places the market stalls somewhere new, and ?layout=fixed keeps the map", async ({ page }) => {
+    await unlockAll(page);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='2']").click();
+    const first = await runMap(page);
+    await page.getByRole("button", { name: "Back" }).click();
+    await page.locator("[data-level='2']").click();
+    const second = await runMap(page);
+    expect(first).toHaveLength(20);
+    expect(second).not.toEqual(first);
+    // The same number of stall cells each time.
+    const cells = (map?: string[]) => (map ?? []).join("").split("#").length - 1;
+    expect(cells(second)).toBe(cells(first));
+
+    await page.goto("/?layout=fixed");
+    await page.getByRole("button", { name: "Choose a level" }).click();
+    await page.locator("[data-level='2']").click();
+    const fixed = await runMap(page);
+    expect(fixed![2]).toBe("..##.....##.....##..");
+  });
+
+  test("a set seed gives the same layout every time", async ({ page }) => {
+    await unlockAll(page);
+    const maps = [];
+    for (let i = 0; i < 2; i++) {
+      await page.goto("/?seed=5");
+      await page.getByRole("button", { name: "Choose a level" }).click();
+      await page.locator("[data-level='2']").click();
+      maps.push(await runMap(page));
+    }
+    expect(maps[1]).toEqual(maps[0]);
+  });
+});
+
+test("choosing a level near the bottom of a long page keeps the game in view", async ({ page }) => {
+  // The game sits in a page with a long section under it, the way it does on the website.
+  await page.route(/\/long-page\.html/, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="/sankofa-snake.css">
+        <h1 style="height:200px">Sankofa Snake</h1>
+        <div data-sankofa-snake></div>
+        <section style="height:3000px">Reviews</section>
+        <script type="module" src="/sankofa-snake.js"></script>`,
+    }),
+  );
+  await page.goto("/long-page.html?seed=1&layout=fixed");
+  await page.getByRole("button", { name: "Choose a level" }).click();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  const last = page.locator("[data-level='8']");
+  await last.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 400));
+  await last.scrollIntoViewIfNeeded();
+  await last.click();
+  await expect(page.locator('[data-hud="level"]')).toHaveText("Practice: Weaving village");
+  const top = await page.locator("[data-sankofa-snake]").evaluate((el) => el.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(0);
+  expect(top).toBeLessThan(100);
+});
+
+test("there are no arrow buttons on a computer", async ({ page, isMobile }) => {
+  test.skip(isMobile, "computers only");
+  await page.goto("/?seed=1&layout=fixed");
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Steering" })).toHaveCount(0);
+  await expect(page.locator(".ss-hint")).toBeVisible();
+});
+
 test.describe("on a phone", () => {
   test.skip(({ isMobile }) => !isMobile, "touch play");
 
   test("the page fits the screen without sideways scrolling", async ({ page }) => {
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Play", exact: true }).click();
     const widths = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
     expect(widths[0]).toBeLessThanOrEqual(widths[1]);
@@ -411,15 +489,15 @@ test.describe("on a phone", () => {
         }
       };
     });
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Play", exact: true }).click();
     expect(await page.evaluate(() => (window as unknown as { audioStarts: number }).audioStarts)).toBe(1);
   });
 
   test("a swipe starts the snake and a tap pauses it", async ({ page }) => {
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Play", exact: true }).click();
-    await expect(page.locator("[data-overlay]").getByText("Swipe to start.")).toBeVisible();
+    await expect(page.locator("[data-overlay]").getByText("Press an arrow or swipe to start.")).toBeVisible();
     const stage = page.locator("[data-stage]");
     const box = (await stage.boundingBox())!;
     const cx = box.x + box.width / 2;
@@ -430,26 +508,49 @@ test.describe("on a phone", () => {
     await expect(page.locator("[data-overlay]").getByText("Paused", { exact: true })).toBeVisible();
   });
 
-  test("the rules and the hint talk about swipes and taps, not keys", async ({ page }) => {
-    await page.goto("/?seed=1");
+  test("the rules talk about the arrow buttons, swipes and taps, not keys", async ({ page }) => {
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "How to play" }).click();
     const rules = page.locator(".ss-list");
-    await expect(rules).toContainText("Swipe on the board");
+    await expect(rules).toContainText("Steer with the arrow buttons, or swipe on the board");
     await expect(rules).toContainText("Tap the board to pause.");
     await expect(rules).not.toContainText("arrow keys");
     await expect(rules).not.toContainText("Space");
     await expect(rules).not.toContainText("Press M");
-    await page.getByRole("button", { name: "Back" }).click();
-    await page.getByRole("button", { name: "Play", exact: true }).click();
-    await expect(page.locator(".ss-hint")).toHaveText("Swipe on the board to steer. Tap the board to pause.");
   });
 
-  test("turned sideways, Pause, Sound and Back stay on the screen", async ({ page }) => {
+  test("the arrow buttons steer the snake", async ({ page }) => {
+    await page.goto("/?seed=1&layout=fixed");
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    const pad = page.getByRole("group", { name: "Steering" });
+    await expect(pad).toBeVisible();
+    // The pad takes the place of the hint, so the board keeps its size.
+    await expect(page.locator(".ss-hint")).toBeHidden();
+    for (const name of ["Up", "Down", "Left", "Right"]) {
+      const box = (await pad.getByRole("button", { name }).boundingBox())!;
+      expect(box.width, name).toBeGreaterThanOrEqual(44);
+      expect(box.height, name).toBeGreaterThanOrEqual(44);
+    }
+    // The snake starts heading right, so Up is a real turn.
+    await pad.getByRole("button", { name: "Up" }).dispatchEvent("pointerdown", { pointerType: "touch", isPrimary: true, button: 0 });
+    await expect(page.locator("[data-overlay]")).toBeHidden();
+    // The whole game, pad included, fits on the screen.
+    const height = page.viewportSize()!.height;
+    const down = (await pad.getByRole("button", { name: "Down" }).boundingBox())!;
+    expect(down.y + down.height).toBeLessThanOrEqual(height);
+  });
+
+  test("turned sideways, Pause, Sound, Back and the arrows stay on the screen", async ({ page }) => {
     await page.setViewportSize({ width: 740, height: 360 });
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Play", exact: true }).click();
     for (const name of ["Pause", "Sound", "Back"]) {
       const box = (await page.locator(".ss-bar").getByRole("button", { name }).boundingBox())!;
+      expect(box.y + box.height, name).toBeLessThanOrEqual(360);
+      expect(box.x + box.width, name).toBeLessThanOrEqual(740);
+    }
+    for (const name of ["Up", "Down", "Left", "Right"]) {
+      const box = (await page.getByRole("group", { name: "Steering" }).getByRole("button", { name }).boundingBox())!;
       expect(box.y + box.height, name).toBeLessThanOrEqual(360);
       expect(box.x + box.width, name).toBeLessThanOrEqual(740);
     }

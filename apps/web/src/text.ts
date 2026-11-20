@@ -38,7 +38,7 @@ export const TEXT = {
     heading: "How to play",
     steer: {
       keys: "Steer with the arrow keys or W, A, S and D.",
-      touch: "Swipe on the board in the direction you want the snake to go.",
+      touch: "Steer with the arrow buttons, or swipe on the board in the direction you want the snake to go.",
     },
     rules: [
       "Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.",
@@ -112,7 +112,7 @@ export const TEXT = {
     passes: (n: number) => (n === 1 ? "One pass through the tail" : `${n} passes through the tail`),
     hint: {
       keys: "Arrow keys or W, A, S and D to steer. Space to pause and M for sound.",
-      touch: "Swipe on the board to steer. Tap the board to pause.",
+      touch: "Press the arrows or swipe on the board to steer. Tap the board to pause.",
     },
   },
 
@@ -121,7 +121,7 @@ export const TEXT = {
     daily: (name: string) => `Daily challenge: ${name}`,
     free: (name: string) => `Free play: ${name}`,
     practice: (name: string) => `Practice: ${name}`,
-    start: { keys: "Press an arrow key to start.", touch: "Swipe to start." },
+    start: { keys: "Press an arrow key to start.", touch: "Press an arrow or swipe to start." },
     bumpTitle: "Bump",
     bumpGo: "Choose a new direction to keep going.",
     paused: "Paused",
@@ -189,6 +189,9 @@ export const TEXT = {
       pass: "Pass. The snake can go through its own tail once.",
     } as Record<PowerKind, string>,
   },
+
+  /** The arrow buttons on phones and tablets. */
+  pad: { label: "Steering", up: "Up", down: "Down", left: "Left", right: "Right" },
 
   cantSave: "This browser isn't letting the game save. Your progress lasts only until you close the page.",
 };
