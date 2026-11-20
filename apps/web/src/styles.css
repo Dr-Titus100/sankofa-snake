@@ -438,3 +438,95 @@
     padding: 8px 14px;
   }
 }
+
+/* The controls under the board: Pause, Sound and Back, and on phones and tablets the arrow pad. */
+.ss-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 20px;
+}
+/* With the pad beside them, the buttons stack in a column so the board keeps its height. */
+.ss-controls.ss-with-pad .ss-bar {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 0;
+}
+.ss-controls.ss-with-pad + .ss-hint {
+  display: none;
+}
+.ss-pad {
+  --ss-pad-size: 52px;
+  display: grid;
+  grid-template-columns: repeat(3, var(--ss-pad-size));
+  grid-template-rows: repeat(3, var(--ss-pad-size));
+  grid-template-areas:
+    ". up ."
+    "left . right"
+    ". down .";
+  gap: 4px;
+  margin-top: 12px;
+}
+.ss-pad-btn {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--ss-cream);
+  border-radius: 12px;
+  background: rgba(247, 238, 220, 0.08);
+  color: var(--ss-cream);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ss-pad-btn svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}
+.ss-pad-btn:active {
+  border-color: var(--ss-gold);
+  background: var(--ss-gold);
+  color: var(--ss-black);
+}
+.ss-pad-up {
+  grid-area: up;
+}
+.ss-pad-down {
+  grid-area: down;
+}
+.ss-pad-left {
+  grid-area: left;
+}
+.ss-pad-right {
+  grid-area: right;
+}
+
+/* Scrolling back to the game clears a sticky page header when the page sets this. */
+.ss-root {
+  scroll-margin-top: var(--ss-scroll-margin, 12px);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  /* The side column is wider on touch screens, so the buttons and the arrow pad fit side by side. */
+  .ss-root.ss-touch .ss-game:not([hidden]) {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 40%);
+  }
+  .ss-game .ss-controls {
+    grid-area: bar;
+    flex-wrap: nowrap;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .ss-game .ss-controls .ss-bar {
+    margin-top: 0;
+  }
+  .ss-pad {
+    --ss-pad-size: 44px;
+    margin-top: 0;
+  }
+}

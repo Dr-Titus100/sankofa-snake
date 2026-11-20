@@ -279,7 +279,7 @@ function vehicleAt(level: LevelDef, fronts: number[], cell: Cell): VehicleDef["k
  * Moves each vehicle one cell when its turn comes. A vehicle waits instead when the next cell is
  * part of the snake or another vehicle, the way a driver brakes for someone crossing the road.
  */
-function moveVehicles(level: LevelDef, fronts: number[], moves: number, snake: Cell[]): number[] {
+export function moveVehicles(level: LevelDef, fronts: number[], moves: number, snake: Cell[]): number[] {
   const vs = level.vehicles ?? [];
   if (!vs.length) return fronts;
   const next = [...fronts];

@@ -29,7 +29,7 @@ async function plainPage(page: Page, script = "") {
         <script type="module" src="/sankofa-snake.js"></script>${script}`,
     }),
   );
-  await page.goto("/plain.html?seed=1");
+  await page.goto("/plain.html?seed=1&layout=fixed");
 }
 
 const HTML = `<img src=x onerror="window.pwned=(window.pwned||0)+1">`;
@@ -67,7 +67,7 @@ test.describe("a damaged or tampered save", () => {
   test("a save that isn't JSON starts the game fresh", async ({ page }) => {
     const errors = watchErrors(page);
     await seed(page, "{not json");
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await expect(page.locator("[data-level='0']")).toContainText("Not played yet");
     expect(errors).toEqual([]);
@@ -75,7 +75,7 @@ test.describe("a damaged or tampered save", () => {
 
   test("a save from 0.6, with no version number, keeps all its progress", async ({ page }) => {
     await seed(page, { levels: { farm: { best: 300, stars: 2, cleared: true } }, settings: { sound: false, vibration: true } });
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Choose a level" }).click();
     await expect(page.locator("[data-level='0']")).toContainText("Best 300");
     await expect(page.locator("[data-level='1']")).toBeEnabled();
@@ -95,7 +95,7 @@ test("every saved field survives a save and a reload", async ({ page }) => {
     settings: { sound: true, vibration: false },
   };
   await seed(page, full);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   // Turning sound off and on again saves the whole progress twice.
   await page.getByRole("button", { name: "How to play" }).click();
   await page.getByRole("button", { name: "Sound", exact: true }).click();
@@ -113,7 +113,7 @@ test("Reset progress asks first, then deletes progress and keeps the switches", 
     free: { "farm-wrap": 9 },
     settings: { sound: false, vibration: true },
   });
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "How to play" }).click();
   await page.getByRole("button", { name: "Reset progress" }).click();
   await expect(page.getByText(/This deletes your scores, stars, cleared levels/)).toBeVisible();
@@ -137,7 +137,7 @@ test("the game says so when the browser won't save progress", async ({ page }) =
     };
   });
   const errors = watchErrors(page);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await expect(page.locator('[data-screen="title"]').getByText(/This browser isn't letting the game save/)).toBeVisible();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect(page.locator('[data-hud="level"]')).toHaveText("Level 1: Farm");
@@ -155,7 +155,7 @@ test("the board isn't redrawn while nothing moves", async ({ page }) => {
     };
   });
   const frames = () => page.evaluate(() => (window as unknown as { frames: number }).frames);
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.waitForTimeout(300);
   const waiting = await frames();
@@ -175,7 +175,7 @@ test("the board isn't redrawn while nothing moves", async ({ page }) => {
 });
 
 test("an error on the board shows a message with a way back to the title", async ({ page }) => {
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.evaluate(() => {
     CanvasRenderingContext2D.prototype.drawImage = () => {
@@ -261,7 +261,7 @@ test("the game makes no network requests", async ({ page }) => {
   const requests: string[] = [];
   page.on("request", (r) => requests.push(`${r.resourceType()} ${new URL(r.url()).pathname}`));
   page.on("websocket", (ws) => requests.push(`websocket ${ws.url()}`));
-  await page.goto("/?seed=1");
+  await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.keyboard.press("ArrowUp");
   await page.waitForTimeout(1500);
@@ -282,7 +282,7 @@ test.describe("on a computer", () => {
   test.skip(({ isMobile }) => isMobile, "keyboard play");
 
   test("the rules talk about keys, not swipes", async ({ page }) => {
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "How to play" }).click();
     const rules = page.locator(".ss-list");
     await expect(rules).toContainText("Steer with the arrow keys or W, A, S and D.");
@@ -292,7 +292,7 @@ test.describe("on a computer", () => {
 
   test("the How to play heading shows a focus ring only after keyboard use", async ({ page }) => {
     const ringed = () => page.evaluate(() => document.activeElement?.matches(".ss-heading:focus-visible") ?? false);
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "How to play" }).click();
     await expect(page.getByRole("heading", { name: "How to play" })).toBeFocused();
     expect(await ringed()).toBe(false);
@@ -309,7 +309,7 @@ test.describe("in a British browser", () => {
 
   test("the daily challenge writes the date the British way", async ({ page }) => {
     await page.clock.install({ time: new Date(2026, 10, 19, 9, 0) });
-    await page.goto("/?seed=1");
+    await page.goto("/?seed=1&layout=fixed");
     await page.getByRole("button", { name: "Daily challenge" }).click();
     await expect(page.getByText(/^Thursday 19 November\./)).toBeVisible();
   });

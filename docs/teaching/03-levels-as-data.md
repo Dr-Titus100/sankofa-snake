@@ -4,7 +4,7 @@ Students learn how each level lives in a data file instead of in code, how a map
 
 ## Start by playing
 
-Play the Market, level 3, and notice where the stalls stand. Then open `levels/03-market.json`.
+Play the Market, level 3, with `?layout=fixed` at the end of the game's address, and notice where the stalls stand. Then open `levels/03-market.json`.
 
 ## A level is a JSON file
 
@@ -52,6 +52,12 @@ The `map` is a list of text rows, one row of the board per line, one character p
 
 `obstacleKeys` in `packages/core/src/levels.ts` reads the map. It goes through every row and every character, and keeps the place of each `#` as text like `"2,1"` so the game can look it up quickly.
 
+## A map is a template
+
+Without `?layout=fixed`, the stalls stand somewhere new every run. `newLayout` in `packages/core/src/layout.ts` reads the map as a list of pieces: each group of `#` cells that touch side by side is one piece, and each straight line of current arrows is one current. It then places every piece at a random spot, keeping one open cell around it, and keeps the cells around the snake's start clear. Last, it checks that every open cell can still be reached from the start. If a layout fails that check, it tries again.
+
+The Maze works differently. A level with `"layout": "maze"` gets a brand new maze, carved by a random walk that never visits a cell twice, then opened up so no corridor ends in a dead end.
+
 ## Why keep levels as data?
 
 - A level designer can change a level without touching the rules.
@@ -66,6 +72,7 @@ That last check is `validateLevel` in `levels.ts`. It returns a list of problems
 2. The Park's speed is `{ "start": 6, "step": 1, "every": 5, "max": 10 }`. How fast is the snake after 12 cowries?
 3. Why does the game store an obstacle's place as text like `"2,1"` in a set, instead of searching the map every move?
 4. Draw a 10 by 10 level on squared paper with a wall of obstacles across the middle and one gap in it. Write its `map` as 10 strings of 10 characters.
+5. The Market's map has twelve stalls of 2 by 2 cells. When the game moves them to new places, why does it keep one open cell around each stall?
 
 ## At the keyboard
 
@@ -104,5 +111,6 @@ That last check is `validateLevel` in `levels.ts`. It returns a list of problems
 2. It speeds up at 5 and 10 cowries, so after 12 it moves at 8 moves a second.
 3. Looking up a key in a set takes about the same time however many obstacles there are. Searching the map means checking many cells on every move.
 4. Answers vary. Check that every row has exactly 10 characters, and that the start cell and the two cells behind it are open.
+5. Two stalls that touch would make one bigger stall, and stalls that touch the edge or each other at a corner can close off a pocket of the board the snake can never reach. The gap keeps every open cell reachable. The check after placing the stalls catches any case the gap misses.
 
-When students add a level to the game, the test that checks every level file picks it up with no extra work. A wall level with `"edges": "walls"` and a solid ring of `#` around the edge is a common first design. Point out that it needs no `#` border, because walls already end the run at the edge.
+When students add a level to the game, the test that checks every level file picks it up with no extra work. Their map is a template too, so a wall with one gap won't stay a wall. Add `"layout": "fixed"` to the file to keep it exactly as drawn. A wall level with `"edges": "walls"` and a solid ring of `#` around the edge is a common first design. Point out that it needs no `#` border, because walls already end the run at the edge.
