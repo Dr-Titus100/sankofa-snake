@@ -43,7 +43,7 @@ if (body.some((c) => sameCell(c, next))) {
 
 On most moves the tail leaves its cell at the same moment the head arrives somewhere new. So the game checks the head against the body without its last cell, `slice(0, -1)`. That is why the snake can chase its own tail.
 
-When the snake eats a cowrie, or is still growing from one, the tail stays put. Then the last cell counts, and running into it ends the run.
+When the head lands on a cowrie, the tail stays put on that same move, so the snake is one cell longer straight away. The `grow` field can also hold extra cells for the snake to grow, and while it is above 0 the tail stays put on every move. Then the last cell counts, and running into it ends the run.
 
 The Lab's pass power-up is checked here too. With a pass, the snake goes through its body once instead of crashing.
 
@@ -55,7 +55,7 @@ Vehicles move first, before the snake, on the same beat. A vehicle waits while t
 
 ## Questions on paper
 
-1. A snake of 4 cells has eaten nothing for a while. Its head is about to move into the cell where its tail is now. Does the run end? What if it ate a cowrie on the move before?
+1. A snake of 4 cells has eaten nothing for a while. Its head is about to move into the cell where its tail is now. Does the run end? What if it ate a cowrie on the move before? What if `grow` is 1?
 2. Why must the edge check come before `wrapCell`?
 3. The game checks obstacles before it checks the snake's body. Could a cell ever hold both? What does that tell you about whether this order matters?
 4. Why does the game store obstacles as text keys like `"7,12"` in a set, instead of as `{ x: 7, y: 12 }` objects in a list?
@@ -103,12 +103,12 @@ Add these tests to `packages/core/test/lesson.test.ts`.
 
 ## Notes for the teacher
 
-1. No, the run goes on, because the tail leaves its cell on the same move. If the snake ate on the move before, it is still growing, so the tail stays and the run ends with `crash: "self"`.
+1. No, the run goes on, because the tail leaves its cell on the same move. Eating on the move before changes nothing: the cowrie added its cell on that move, so `grow` is still 0 and the tail moves away as usual. Only with `grow` at 1 does the tail stay, and then the run ends with `crash: "self"`. Keyboard exercise 3 checks this.
 2. After `wrapCell`, a cell off the right edge becomes a cell on the left edge, which is on the board. The check would never see it as outside.
 3. No. The snake can never move into an obstacle, so the two never share a cell. The order still decides which message a player sees when two kinds of collision could happen, so it's worth reading carefully when adding a new kind.
 4. Two objects with the same numbers are still different objects, so a set of objects can't find `{ x: 7, y: 12 }` from a new object. The text `"7,12"` is the same text however it was made, so `has` finds it at once.
 5. The vehicle waits. `moveVehicles` in `game.ts` doesn't move a vehicle into a cell the snake is in, which is why only the head can hit a vehicle.
 
-For keyboard exercise 3, the run ends with `crash: "self"`, because a growing snake keeps its tail cell.
+For keyboard exercise 3, the run ends with `crash: "self"`, because a snake with cells left to grow keeps its tail cell.
 
 A good extension is to ask students where they would add a new kind of obstacle, such as a puddle that only slows the snake down, and which checks it would need to come before or after.
