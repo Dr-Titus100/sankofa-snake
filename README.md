@@ -81,9 +81,18 @@ npm run dev         # rebuilds on every change at http://localhost:5173
 
 Give the attribute the value `play` to leave out the How to play button, or `help` to show only the rules and the sound and vibration switches. A site can use the two to put the rules on a tab of their own, the way titusnyarkonde.com does.
 
+### Packages and install scripts
+
+The game ships no packages. The five packages in `package.json` are tools for building and testing, each pinned to an exact version in `package-lock.json`. Two of the packages they pull in run a script when they install, and both are expected:
+
+- `esbuild` checks that its build program for your system is in place.
+- `fsevents` is only installed on macOS, where it watches files for changes.
+
+If a new package ever adds an install script, `package-lock.json` shows `"hasInstallScript": true` on it. Check it before you merge. Dependabot opens pull requests for package and GitHub Actions updates each week, and waits until a new version has been out for 14 days. CodeQL scans the code and the workflows on every push and pull request.
+
 ## Releases
 
-The release workflow tests and builds the game, then attaches the built files to a GitHub release. Pushing a tag such as `v0.1.1` starts it. You can also start it by hand from the Actions tab with the tag name, and it creates the tag for you. The website pins one release and checks each file's checksum before it serves the game.
+The release workflow tests and builds the game, then attaches the built files to a GitHub release. Its build job has read-only access, and only the publish job, which runs no package code, can write to the repo. Pushing a tag such as `v0.1.1` starts it. You can also start it by hand from the Actions tab with the tag name, and it creates the tag for you. The website pins one release and checks each file's checksum before it serves the game.
 
 ## Privacy
 
@@ -95,6 +104,10 @@ This game started from a snake game Titus built in R Shiny, which grew out of [A
 
 The game draws the kente patterns and the Sankofa bird in code. They draw on kente cloth and Adinkra symbols from Ghana and don't copy any named cloth design.
 
+[ART.md](ART.md) records how each drawing and sound was made.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+The MIT license covers the code. The name "Sankofa Snake", the bird logo and the store art stay with the official game, so a copy needs its own name and logo. See [TRADEMARKS.md](TRADEMARKS.md).
