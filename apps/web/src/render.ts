@@ -192,48 +192,96 @@ export function layoutFor(size: number, level: LevelDef): Layout {
   return { size, frame, cell: (size - frame * 2) / level.width };
 }
 
-export function draw(ctx: CanvasRenderingContext2D, state: GameState, layout: Layout, time: number, still: boolean) {
+/**
+ * The parts of the board that never move during a run, drawn once per level and size and then
+ * copied onto the board each frame. `back` is everything under the currents, `front` is the walls
+ * and obstacles, which sit on top of them.
+ */
+export interface Scenery {
+  level: LevelDef;
+  obstacles: Set<string>;
+  pixels: number;
+  size: number;
+  back: HTMLCanvasElement;
+  front: HTMLCanvasElement;
+}
+
+/** Holds the scenery between frames. The game keeps one per board. */
+export type SceneryCache = { scenery?: Scenery };
+
+function layer(ctx: CanvasRenderingContext2D): [HTMLCanvasElement, CanvasRenderingContext2D] {
+  const canvas = document.createElement("canvas");
+  canvas.width = ctx.canvas.width;
+  canvas.height = ctx.canvas.height;
+  const c = canvas.getContext("2d")!;
+  c.setTransform(ctx.getTransform());
+  return [canvas, c];
+}
+
+function sceneryFor(ctx: CanvasRenderingContext2D, state: GameState, layout: Layout, cache: SceneryCache): Scenery {
   const { level } = state;
+  const old = cache.scenery;
+  if (old && old.level === level && old.obstacles === state.obstacles && old.pixels === ctx.canvas.width && old.size === layout.size) {
+    return old;
+  }
   const { size, frame, cell } = layout;
   const world = WORLDS[level.world];
-  ctx.clearRect(0, 0, size, size);
-  drawFrame(ctx, size, frame);
+  const [back, b] = layer(ctx);
+  drawFrame(b, size, frame);
 
   // Ground and scenery.
-  ctx.fillStyle = world.ground;
-  ctx.fillRect(frame, frame, size - frame * 2, size - frame * 2);
+  b.fillStyle = world.ground;
+  b.fillRect(frame, frame, size - frame * 2, size - frame * 2);
   for (let cy = 0; cy < level.height; cy++) {
-    for (let cx = 0; cx < level.width; cx++) world.detail(ctx, frame + cx * cell, frame + cy * cell, cell, cx, cy);
+    for (let cx = 0; cx < level.width; cx++) world.detail(b, frame + cx * cell, frame + cy * cell, cell, cx, cy);
   }
 
   // Faint thread lines for the grid, like the warp of a loom.
-  ctx.strokeStyle = "rgba(242,183,5,0.08)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
+  b.strokeStyle = "rgba(242,183,5,0.08)";
+  b.lineWidth = 1;
+  b.beginPath();
   for (let i = 1; i < level.width; i++) {
     const p = Math.round(frame + i * cell) + 0.5;
-    ctx.moveTo(p, frame);
-    ctx.lineTo(p, size - frame);
+    b.moveTo(p, frame);
+    b.lineTo(p, size - frame);
   }
   for (let i = 1; i < level.height; i++) {
     const p = Math.round(frame + i * cell) + 0.5;
-    ctx.moveTo(frame, p);
-    ctx.lineTo(size - frame, p);
+    b.moveTo(frame, p);
+    b.lineTo(size - frame, p);
   }
-  ctx.stroke();
+  b.stroke();
+  for (const v of level.vehicles ?? []) drawLane(b, v, layout, level);
 
-  for (const v of level.vehicles ?? []) drawLane(ctx, v, layout, level);
+  const [front, f] = layer(ctx);
+  if (level.edges === "walls") drawWalls(f, layout);
+  const drawObstacle = OBSTACLES[level.world] ?? drawStall;
+  for (const k of state.obstacles) {
+    const [cx, cy] = k.split(",").map(Number);
+    drawObstacle(f, frame + cx * cell, frame + cy * cell, cell, state.obstacles.has(`${cx},${cy - 1}`), cx, cy, state.obstacles);
+  }
+  cache.scenery = { level, obstacles: state.obstacles, pixels: ctx.canvas.width, size, back, front };
+  return cache.scenery;
+}
+
+export function draw(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  layout: Layout,
+  time: number,
+  still: boolean,
+  cache: SceneryCache = {},
+) {
+  const { level } = state;
+  const { size, frame, cell } = layout;
+  const scenery = sceneryFor(ctx, state, layout, cache);
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(scenery.back, 0, 0, size, size);
   for (const [k, dir] of state.currents) {
     const [cx, cy] = k.split(",").map(Number);
     drawCurrent(ctx, frame + cx * cell, frame + cy * cell, cell, dir, still ? 0 : time);
   }
-  if (level.edges === "walls") drawWalls(ctx, layout);
-
-  const drawObstacle = OBSTACLES[level.world] ?? drawStall;
-  for (const k of state.obstacles) {
-    const [cx, cy] = k.split(",").map(Number);
-    drawObstacle(ctx, frame + cx * cell, frame + cy * cell, cell, state.obstacles.has(`${cx},${cy - 1}`), cx, cy, state.obstacles);
-  }
+  ctx.drawImage(scenery.front, 0, 0, size, size);
 
   if (state.powerUp) drawPowerUp(ctx, state.powerUp, state.moves, layout, time, still);
 

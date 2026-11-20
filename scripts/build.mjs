@@ -5,9 +5,8 @@
 //   index.html          a page that runs the game on its own
 // Run with --serve to rebuild on every change and serve dist/ at http://localhost:5173.
 import { build, context } from "esbuild";
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // fileURLToPath turns the URL into a real path, so the build also works on Windows
@@ -34,7 +33,11 @@ const options = {
   logLevel: "info",
 };
 
-copyFileSync(`${root}apps/web/index.html`, `${dist}/index.html`);
+// The page's Content Security Policy allows its one inline style block by its hash.
+const page = readFileSync(`${root}apps/web/index.html`, "utf8");
+const style = /<style>([\s\S]*?)<\/style>/.exec(page)?.[1] ?? "";
+const styleHash = `sha256-${createHash("sha256").update(style).digest("base64")}`;
+writeFileSync(`${dist}/index.html`, page.replace("STYLE_HASH", styleHash));
 
 // The logo file comes from the same drawing the game uses.
 const logo = await build({ entryPoints: [`${root}apps/web/src/logo.ts`], bundle: true, format: "esm", write: false });

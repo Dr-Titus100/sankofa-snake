@@ -1,6 +1,6 @@
 // The web game: the title screen, the level list, the daily challenge, free play, practice, the
 // board and the messages over it.
-// The rules come from packages/core. This file connects them to the page.
+// The rules come from packages/core. This file connects them to the page. The words come from text.ts.
 import {
   LEVELS,
   createGame,
@@ -19,18 +19,20 @@ import {
   type GameEvent,
   type LevelDef,
   type GameState,
-  type PowerKind,
 } from "../../../packages/core/src";
-import { commandForKey, listenForTouch, type Command } from "./input";
+import { commandForKey, inputKind, listenForSwipes, type Command } from "./input";
 import { sankofaLogo } from "./logo";
-import { draw, layoutFor, type Layout } from "./render";
+import { draw, layoutFor, type Layout, type SceneryCache } from "./render";
 import { Sound } from "./sound";
 import {
+  canSave,
+  cleanProgress,
   currentStreak,
   loadProgress,
   recordDaily,
   recordFree,
   recordRun,
+  resetProgress,
   saveProgress,
   PROGRESS_KEY,
   SAVED_EVENT,
@@ -38,55 +40,19 @@ import {
   type Progress,
   type Settings,
 } from "./storage";
+import { TEXT, bumpText, crashText, esc, longDate, type Input } from "./text";
 
 type Screen = "title" | "levels" | "daily" | "help" | "game";
 
 /** The ways to play. "levels" is the nine levels in order. */
 type Mode = "levels" | "daily" | "free" | "practice";
 
-/** What the obstacles are in each world, for the message after a crash. */
-const OBSTACLE_NAME: Record<string, string> = {
-  market: "a market stall",
-  city: "a building",
-  lab: "a lab bench",
-  maze: "a wall of the maze",
-  ocean: "a canoe",
-  village: "a loom",
-};
-
-/** What the screen reader says when the snake picks up each power-up. */
-const POWER_TEXT: Record<PowerKind, string> = {
-  slow: "Slow motion. The snake moves slower for a while.",
-  shrink: "Shrink. The snake is shorter now.",
-  pass: "Pass. The snake can go through its own tail once.",
-};
-
-const POWER_NAME: Record<PowerKind, string> = { slow: "slow motion", shrink: "shrink", pass: "pass" };
-
-/** What the snake ran into, as words for a sentence. */
-function hitName(s: GameState, cause: GameState["crash"]): string {
-  return {
-    wall: "the wall",
-    obstacle: OBSTACLE_NAME[s.level.world] ?? "an obstacle",
-    vehicle: `a ${s.crashVehicle ?? "car"}`,
-    self: "its own tail",
-  }[cause ?? "self"];
-}
-
-/** One sentence saying what ended the run. */
-function crashText(s: GameState): string {
-  const what = hitName(s, s.crash);
-  if (s.crashPushed) return `A current pushed the snake into ${what}.`;
-  return s.crash === "wall" ? "The snake hit the wall." : `The snake ran into ${what}.`;
-}
-
-/** In practice, one sentence saying what stopped the snake. */
-const bumpText = (s: GameState) => `The snake bumped into ${hitName(s, s.bump)}.`;
-
-/** Today's date, written out for the daily challenge screen, such as "Thursday 19 November". */
-const longDate = (d: Date) => d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-
 const starText = (n: number) => "★".repeat(n) + "☆".repeat(3 - n);
+
+/** On a phone turned sideways, the board sits beside the score and buttons instead of above them. */
+const SIDEWAYS = "(orientation: landscape) and (max-height: 500px)";
+
+let copies = 0;
 
 export interface Options {
   /** A fixed seed puts the cowries in the same places every time. The tests use it. */
@@ -114,30 +80,45 @@ export class SankofaSnake {
   private canvas!: HTMLCanvasElement;
   private ctx!: CanvasRenderingContext2D;
   private layout!: Layout;
+  private scenery: SceneryCache = {};
   private frameId = 0;
   private lastTime = 0;
   private carry = 0;
   private lastClear: Extract<GameEvent, { type: "cleared" }> | null = null;
   private reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  private input: Input = inputKind();
   private sound: Sound;
+  /** Removes every listener the game added to the window, the document and the board. */
+  private listeners = new AbortController();
+  private resizer: ResizeObserver | null = null;
+  /** False when the browser won't keep progress, such as in some private windows. */
+  private saving = canSave();
+  private id = ++copies;
+  private destroyed = false;
 
   constructor(root: HTMLElement, private options: Options = {}) {
     this.root = root;
     const settings = settingsOf(this.progress);
     this.sound = new Sound(settings.sound, settings.vibration);
+    const signal = this.listeners.signal;
     root.classList.add("ss-root");
     // A page can hold more than one copy of the game, such as a play view and a help view, and a player
     // can have the game open in two tabs. Each copy loads progress again whenever another one saves, so
     // a stale copy never writes over newer scores or switches.
-    window.addEventListener(SAVED_EVENT, () => this.reload());
-    window.addEventListener("storage", (e) => {
-      if (e.key === null || e.key === PROGRESS_KEY) this.reload();
-    });
+    window.addEventListener(SAVED_EVENT, () => this.reload(), { signal });
+    window.addEventListener(
+      "storage",
+      (e) => {
+        if (e.key === null || e.key === PROGRESS_KEY) this.reload();
+      },
+      { signal },
+    );
     if (options.view === "help") {
       // Only the rules and the switches. No board, so no keys or game listeners either.
       root.innerHTML = `
         <div class="ss-screen ss-help" data-screen="help"></div>
         <p class="ss-sr" aria-live="polite" data-live></p>`;
+      this.screen = "help";
       this.renderHelp();
       return;
     }
@@ -151,15 +132,63 @@ export class SankofaSnake {
     this.renderTitle();
     this.renderHelp();
     this.renderGameShell();
-    window.addEventListener("keydown", (e) => this.onKey(e));
+    window.addEventListener("keydown", (e) => this.onKey(e), { signal });
     // Pause when the player switches tabs or apps, so the snake never crashes unseen.
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden && this.state) this.apply(pause(this.state));
-    });
-    window.addEventListener("blur", () => {
-      if (this.screen === "game" && this.state) this.apply(pause(this.state));
-    });
-    new ResizeObserver(() => this.resize()).observe(root);
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.hidden && this.state) this.guard(() => this.apply(pause(this.state)));
+      },
+      { signal },
+    );
+    window.addEventListener(
+      "blur",
+      () => {
+        if (this.screen === "game" && this.state) this.guard(() => this.apply(pause(this.state)));
+      },
+      { signal },
+    );
+    this.resizer = new ResizeObserver(() => this.guard(() => this.resize()));
+    this.resizer.observe(root);
+  }
+
+  /**
+   * Goes back one step, the way the Android back button does: a run pauses first, then each press
+   * goes back one screen. Returns false on the title screen, where the app itself should close.
+   */
+  back(): boolean {
+    if (this.destroyed) return false;
+    const confirm = this.root.querySelector<HTMLElement>("[data-confirm]:not([hidden])");
+    if (confirm) {
+      this.closeConfirm();
+      return true;
+    }
+    if (this.options.view === "help") return false;
+    if (this.screen === "game") {
+      if (this.state?.status === "running") this.guard(() => this.apply(pause(this.state)));
+      else this.leaveRun();
+      return true;
+    }
+    if (this.screen === "title") return false;
+    this.show("title");
+    return true;
+  }
+
+  /**
+   * Removes the game from the page: stops the board, closes the sound and removes every listener.
+   * The element can then hold a new copy of the game.
+   */
+  destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.stopLoop();
+    this.listeners.abort();
+    this.resizer?.disconnect();
+    this.sound.close();
+    this.root.innerHTML = "";
+    this.root.classList.remove("ss-root");
+    delete this.root.dataset.ssStarted;
+    delete (this.root as HTMLElement & { sankofaSnake?: unknown }).sankofaSnake;
   }
 
   // Screens
@@ -171,24 +200,31 @@ export class SankofaSnake {
     });
     if (screen === "levels") this.renderLevels();
     if (screen === "daily") this.renderDaily();
-    if (screen !== "game") cancelAnimationFrame(this.frameId);
+    if (screen !== "game") this.stopLoop();
     const first = this.root.querySelector<HTMLElement>(`[data-screen="${screen}"] [data-focus]`);
     first?.focus();
   }
 
+  /** A note shown when the browser won't keep progress. */
+  private saveWarning() {
+    return this.saving ? "" : `<p class="ss-note ss-warn" role="status" data-cant-save>${esc(TEXT.cantSave)}</p>`;
+  }
+
   private renderTitle() {
     const el = this.part("title");
+    const b = TEXT.buttons;
     el.innerHTML = `
-      <div class="ss-logo">${sankofaLogo(150, "Sankofa bird, the game's logo")}</div>
-      <h2 class="ss-heading">Sankofa Snake</h2>
-      <p class="ss-lead">Steer a snake of woven kente blocks around the board and collect cowrie shells. Each level adds a new world and one new rule.</p>
+      <div class="ss-logo">${sankofaLogo(150, TEXT.logoLabel)}</div>
+      <h2 class="ss-heading">${esc(TEXT.name)}</h2>
+      <p class="ss-lead">${esc(TEXT.lead)}</p>
       <div class="ss-actions">
-        <button class="ss-btn ss-primary" data-play data-focus>Play</button>
-        <button class="ss-btn" data-go="daily">Daily challenge</button>
-        <button class="ss-btn" data-levels>Choose a level</button>
-        ${this.options.view === "play" ? "" : `<button class="ss-btn" data-go="help">How to play</button>`}
+        <button class="ss-btn ss-primary" data-play data-focus>${esc(b.play)}</button>
+        <button class="ss-btn" data-go="daily">${esc(b.daily)}</button>
+        <button class="ss-btn" data-levels>${esc(b.chooseLevel)}</button>
+        ${this.options.view === "play" ? "" : `<button class="ss-btn" data-go="help">${esc(b.howToPlay)}</button>`}
       </div>
-      <p class="ss-note">Sankofa is an Akan word from Ghana. It means "go back and get it."</p>`;
+      ${this.saveWarning()}
+      <p class="ss-note">${esc(TEXT.sankofaNote)}</p>`;
     el.querySelector("[data-play]")!.addEventListener("click", () => this.startRun("levels", this.nextLevelIndex()));
     el.querySelector("[data-levels]")!.addEventListener("click", () => {
       this.listMode = "levels";
@@ -200,75 +236,105 @@ export class SankofaSnake {
   private renderHelp() {
     const el = this.part("help");
     const alone = this.options.view === "help";
+    const h = TEXT.help;
+    const b = TEXT.buttons;
+    const items = [h.steer[this.input], ...h.rules, h.pause[this.input], ...h.more];
+    if (this.input === "keys") items.push(h.soundKey);
+    const confirmId = `ss-confirm-${this.id}`;
     el.innerHTML = `
-      ${alone ? "" : `<h2 class="ss-heading" tabindex="-1" data-focus>How to play</h2>`}
-      <ul class="ss-list">
-        <li>Steer with the arrow keys or W, A, S and D. On a phone, swipe in the direction you want to go.</li>
-        <li>Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.</li>
-        <li>The run ends if the snake runs into its own tail, an obstacle or a vehicle. Vehicles stop for the snake, so cross the road in front of them or behind them. From the City on, the edge of the board is a wall too.</li>
-        <li>In the Ocean and the Weaving village, currents push the snake one square the way their arrows point when it swims across them. Swimming along a current does nothing.</li>
-        <li>In the Lab, the Maze and the Weaving village, power-ups appear on the board for a short time. The gold hourglass is slow motion, the red arrows shrink the snake, and the green loop lets the snake pass through its own tail once.</li>
-        <li>Pause with Space, P or Escape, or tap the board on a phone. The game also pauses when you switch tabs.</li>
-        <li>Clearing a level earns one star. A high score and a fast finish earn up to two more.</li>
-        <li>The daily challenge mixes a world and its rules from the date, so everyone who plays that day gets the same one. Clear it on days in a row to build a streak.</li>
-        <li>Free play is the classic game in any world you have opened, with wrap-around edges or walls. It goes on until the snake crashes.</li>
-        <li>Practice opens every level at a slower speed. Running into something only stops the snake, so it suits a class demo.</li>
-        <li>Press M to turn the sound off or on.</li>
-      </ul>
-      <h3 class="ss-subheading">Settings</h3>
-      <div class="ss-tabs" role="group" aria-label="Settings">
-        <button class="ss-tab" data-setting="sound">Sound</button>
-        ${Sound.canVibrate ? `<button class="ss-tab" data-setting="vibration">Vibration</button>` : ""}
+      ${alone ? "" : `<h2 class="ss-heading" tabindex="-1" data-focus>${esc(h.heading)}</h2>`}
+      <ul class="ss-list">${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+      <h3 class="ss-subheading">${esc(h.settings)}</h3>
+      <div class="ss-tabs" role="group" aria-label="${esc(h.settingsLabel)}">
+        <button class="ss-tab" data-setting="sound">${esc(b.sound)}</button>
+        ${Sound.canVibrate ? `<button class="ss-tab" data-setting="vibration">${esc(b.vibration)}</button>` : ""}
       </div>
-      <p class="ss-note ss-intro">Gold means on. ${Sound.canVibrate ? "Vibration works on most Android phones." : ""}</p>
-      ${alone ? "" : `<div class="ss-actions"><button class="ss-btn" data-go="title">Back</button></div>`}`;
-    el.querySelectorAll<HTMLButtonElement>("[data-setting]").forEach((b) => {
-      b.addEventListener("click", () => this.toggleSetting(b.dataset.setting as keyof Settings));
+      <p class="ss-note ss-intro">${esc(h.goldMeansOn)} ${Sound.canVibrate ? esc(h.vibrationNote) : ""}</p>
+      <h3 class="ss-subheading">${esc(h.progress)}</h3>
+      <p class="ss-note ss-intro">${esc(h.progressNote)}</p>
+      ${this.saveWarning()}
+      <div class="ss-actions" data-reset-area>
+        <button class="ss-btn" data-reset>${esc(b.reset)}</button>
+      </div>
+      <div class="ss-confirm" role="group" aria-labelledby="${confirmId}" data-confirm hidden>
+        <p id="${confirmId}">${esc(h.confirm)}</p>
+        <div class="ss-actions">
+          <button class="ss-btn ss-danger" data-confirm-yes>${esc(b.confirmReset)}</button>
+          <button class="ss-btn" data-confirm-no>${esc(b.cancel)}</button>
+        </div>
+      </div>
+      <p class="ss-note ss-done" role="status" data-reset-done></p>
+      ${alone ? "" : `<div class="ss-actions"><button class="ss-btn" data-go="title">${esc(b.back)}</button></div>`}`;
+    el.querySelectorAll<HTMLButtonElement>("[data-setting]").forEach((btn) => {
+      btn.addEventListener("click", () => this.toggleSetting(btn.dataset.setting as keyof Settings));
     });
+    el.querySelector("[data-reset]")!.addEventListener("click", () => this.openConfirm());
+    el.querySelector("[data-confirm-no]")!.addEventListener("click", () => this.closeConfirm());
+    el.querySelector("[data-confirm-yes]")!.addEventListener("click", () => this.resetAll());
     this.syncSettings();
     this.wireNav(el);
+  }
+
+  private openConfirm() {
+    const el = this.part("help");
+    el.querySelector<HTMLElement>("[data-reset-area]")!.hidden = true;
+    el.querySelector<HTMLElement>("[data-reset-done]")!.textContent = "";
+    el.querySelector<HTMLElement>("[data-confirm]")!.hidden = false;
+    // Cancel takes focus, so a stray Enter keeps the progress.
+    el.querySelector<HTMLElement>("[data-confirm-no]")!.focus();
+  }
+
+  private closeConfirm() {
+    const el = this.part("help");
+    el.querySelector<HTMLElement>("[data-confirm]")!.hidden = true;
+    el.querySelector<HTMLElement>("[data-reset-area]")!.hidden = false;
+    el.querySelector<HTMLElement>("[data-reset]")!.focus();
+  }
+
+  private resetAll() {
+    this.progress = resetProgress(this.progress);
+    this.save();
+    this.closeConfirm();
+    this.part("help").querySelector<HTMLElement>("[data-reset-done]")!.textContent = TEXT.help.resetDone;
   }
 
   private renderLevels() {
     const el = this.part("levels");
     const mode = this.listMode;
+    const t = TEXT.levels;
     const tab = (m: typeof mode, label: string) =>
-      `<button class="ss-tab" data-tab="${m}" aria-pressed="${m === mode}">${label}</button>`;
+      `<button class="ss-tab" data-tab="${m}" aria-pressed="${m === mode}">${esc(label)}</button>`;
     const edge = (e: Edges, label: string) =>
-      `<button class="ss-tab" data-edges="${e}" aria-pressed="${e === this.freeEdges}">${label}</button>`;
+      `<button class="ss-tab" data-edges="${e}" aria-pressed="${e === this.freeEdges}">${esc(label)}</button>`;
     const cards = LEVELS.map((level, i) => {
       const p = this.progress.levels[level.id];
       const open = mode === "practice" || this.isUnlocked(i);
       let status: string;
-      if (!open) status = `<span>Clear the ${LEVELS[i - 1].name} to open this level</span>`;
-      else if (mode === "practice") status = `<span>Slower, and the run never ends</span>`;
-      else if (mode === "free") status = `<span>Best ${this.progress.free?.[this.freeKey(level)] ?? 0} cowries</span>`;
-      else if (p) status = `<span class="ss-stars" aria-label="${p.stars} of 3 stars">${starText(p.stars)}</span><span>Best ${p.best}</span>`;
-      else status = `<span>Not played yet</span>`;
+      if (!open) status = `<span>${esc(t.locked(LEVELS[i - 1].name))}</span>`;
+      else if (mode === "practice") status = `<span>${esc(t.practiceStatus)}</span>`;
+      else if (mode === "free") status = `<span>${esc(t.freeBest(this.progress.free?.[this.freeKey(level)] ?? 0))}</span>`;
+      else if (p) {
+        status = `<span class="ss-stars" aria-label="${esc(TEXT.run.stars(p.stars))}">${starText(p.stars)}</span><span>${esc(t.best(p.best))}</span>`;
+      } else status = `<span>${esc(t.notPlayed)}</span>`;
       return `
         <li>
-          <button class="ss-card ss-world-${level.world}" data-level="${i}" ${open ? "" : "disabled"}>
-            <span class="ss-card-top">Level ${level.number}</span>
-            <span class="ss-card-name">${level.name}</span>
-            ${mode === "free" ? "" : `<span class="ss-card-text">${level.challenge}</span>`}
+          <button class="ss-card ss-world-${esc(level.world)}" data-level="${i}" ${open ? "" : "disabled"}>
+            <span class="ss-card-top">${esc(t.card(level.number))}</span>
+            <span class="ss-card-name">${esc(level.name)}</span>
+            ${mode === "free" ? "" : `<span class="ss-card-text">${esc(level.challenge)}</span>`}
             <span class="ss-card-status">${status}</span>
           </button>
         </li>`;
     }).join("");
-    const intro = {
-      levels: "Clear a level to open the next one.",
-      free: "Play the classic game in any world you have opened, until the snake crashes.",
-      practice: "Every level, at a slower speed. Running into something only stops the snake.",
-    }[mode];
     el.innerHTML = `
-      <h2 class="ss-heading">${{ levels: "Levels", free: "Free play", practice: "Practice" }[mode]}</h2>
-      <div class="ss-tabs" role="group" aria-label="Way to play">
-        ${tab("levels", "Levels")}${tab("free", "Free play")}${tab("practice", "Practice")}
+      <h2 class="ss-heading">${esc(t.heading[mode])}</h2>
+      <div class="ss-tabs" role="group" aria-label="${esc(t.tabsLabel)}">
+        ${tab("levels", t.heading.levels)}${tab("free", t.heading.free)}${tab("practice", t.heading.practice)}
       </div>
-      ${mode === "free" ? `<div class="ss-tabs ss-tabs-small" role="group" aria-label="Edges">${edge("wrap", "Wrap-around edges")}${edge("walls", "Walls")}</div>` : ""}
-      <p class="ss-note ss-intro">${intro}</p>
+      ${mode === "free" ? `<div class="ss-tabs ss-tabs-small" role="group" aria-label="${esc(t.edgesLabel)}">${edge("wrap", t.wrap)}${edge("walls", t.walls)}</div>` : ""}
+      <p class="ss-note ss-intro">${esc(t.intro[mode])}</p>
       <ul class="ss-cards">${cards}</ul>
-      <div class="ss-actions"><button class="ss-btn" data-go="title">Back</button></div>`;
+      <div class="ss-actions"><button class="ss-btn" data-go="title">${esc(TEXT.buttons.back)}</button></div>`;
     el.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((b) => {
       b.addEventListener("click", () => this.startRun(mode, Number(b.dataset.level)));
     });
@@ -292,28 +358,28 @@ export class SankofaSnake {
 
   private renderDaily() {
     const el = this.part("daily");
+    const t = TEXT.daily;
     const now = new Date();
     const today = dateKey(now);
     const level = dailyLevel(today);
     const d = this.progress.daily?.date === today ? this.progress.daily : undefined;
-    const streak = currentStreak(this.progress, today);
-    const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
+    const streak = t.streak(currentStreak(this.progress, today), this.progress.daily?.bestStreak ?? 0);
     el.innerHTML = `
-      <h2 class="ss-heading">Daily challenge</h2>
-      <p class="ss-lead">${longDate(now)}. Everyone who plays today gets the same challenge. A new one starts at midnight.</p>
-      <div class="ss-card ss-daily-card ss-world-${level.world}">
-        <span class="ss-card-top">Today's world</span>
-        <span class="ss-card-name">${level.name}</span>
-        <span class="ss-card-text">${level.challenge} Eat ${level.goal} cowries to clear it.</span>
+      <h2 class="ss-heading">${esc(t.heading)}</h2>
+      <p class="ss-lead">${esc(t.lead(longDate(now)))}</p>
+      <div class="ss-card ss-daily-card ss-world-${esc(level.world)}">
+        <span class="ss-card-top">${esc(t.world)}</span>
+        <span class="ss-card-name">${esc(level.name)}</span>
+        <span class="ss-card-text">${esc(t.goal(level.challenge, level.goal))}</span>
         <span class="ss-card-status">
-          <span>${d?.cleared ? "Cleared today" : "Not cleared yet today"}</span>
-          <span>Today's best ${d?.best ?? 0}</span>
+          <span>${esc(d?.cleared ? t.clearedToday : t.notCleared)}</span>
+          <span>${esc(t.todaysBest(d?.best ?? 0))}</span>
         </span>
       </div>
-      <p class="ss-streak">Streak: <strong>${days(streak)}</strong>. Longest: ${days(this.progress.daily?.bestStreak ?? 0)}.</p>
+      <p class="ss-streak">${esc(streak.label)} <strong>${esc(streak.now)}</strong>. ${esc(streak.rest)}</p>
       <div class="ss-actions">
-        <button class="ss-btn ss-primary" data-daily data-focus>Play today's challenge</button>
-        <button class="ss-btn" data-go="title">Back</button>
+        <button class="ss-btn ss-primary" data-daily data-focus>${esc(TEXT.buttons.playDaily)}</button>
+        <button class="ss-btn" data-go="title">${esc(TEXT.buttons.back)}</button>
       </div>`;
     el.querySelector("[data-daily]")!.addEventListener("click", () => this.startRun("daily", 0));
     this.wireNav(el);
@@ -321,34 +387,37 @@ export class SankofaSnake {
 
   private renderGameShell() {
     const el = this.part("game");
+    const h = TEXT.hud;
+    const b = TEXT.buttons;
     el.innerHTML = `
       <div class="ss-hud">
         <h2 class="ss-hud-level" data-hud="level"></h2>
         <dl class="ss-hud-stats">
-          <div><dt>Cowries</dt><dd data-hud="eaten"></dd></div>
-          <div><dt>Score</dt><dd data-hud="score"></dd></div>
-          <div><dt>Best</dt><dd data-hud="best"></dd></div>
+          <div><dt>${esc(h.cowries)}</dt><dd data-hud="eaten"></dd></div>
+          <div><dt>${esc(h.score)}</dt><dd data-hud="score"></dd></div>
+          <div><dt>${esc(h.best)}</dt><dd data-hud="best"></dd></div>
         </dl>
         <p class="ss-hud-power" data-hud="power"></p>
       </div>
       <div class="ss-stage" data-stage>
-        <canvas class="ss-canvas" role="img" aria-label="Game board"></canvas>
+        <canvas class="ss-canvas" role="img" aria-label="${esc(h.board)}"></canvas>
         <div class="ss-overlay" data-overlay></div>
       </div>
       <div class="ss-actions ss-bar">
-        <button class="ss-btn" data-pause>Pause</button>
-        <button class="ss-btn ss-toggle" data-setting="sound">Sound</button>
-        <button class="ss-btn" data-back>Back</button>
+        <button class="ss-btn" data-pause>${esc(b.pause)}</button>
+        <button class="ss-btn ss-toggle" data-setting="sound">${esc(b.sound)}</button>
+        <button class="ss-btn" data-back>${esc(b.back)}</button>
       </div>
-      <p class="ss-note ss-hint">Arrow keys or W, A, S and D to steer. Space to pause and M for sound. On a phone, swipe to steer and tap the board to pause.</p>`;
+      <p class="ss-note ss-hint">${esc(h.hint[this.input])}</p>`;
+    const signal = this.listeners.signal;
     this.canvas = el.querySelector("canvas")!;
     this.ctx = this.canvas.getContext("2d")!;
     el.querySelector("[data-pause]")!.addEventListener("click", () => this.command({ type: "pause" }));
     const stage = el.querySelector<HTMLElement>("[data-stage]")!;
-    listenForTouch(stage, (c) => this.command(c));
-    // A swipe steers during touchmove, which iPhones don't count as a press for sound. The end of the touch does count.
-    stage.addEventListener("touchend", () => this.sound.unlock(), { passive: true });
-    el.querySelector("[data-back]")!.addEventListener("click", () => this.back());
+    listenForSwipes(stage, (c) => this.command(c), signal);
+    // A swipe steers during pointermove, which iPhones don't count as a press for sound. The end of the touch does count.
+    stage.addEventListener("pointerup", () => this.sound.unlock(), { signal });
+    el.querySelector("[data-back]")!.addEventListener("click", () => this.leaveRun());
     el.querySelector("[data-setting]")!.addEventListener("click", () => this.toggleSetting("sound"));
     this.syncSettings();
     this.wireNav(el);
@@ -373,17 +442,32 @@ export class SankofaSnake {
     this.syncSettings();
   }
 
+  /** Saves progress, and tells the player once if the browser won't keep it. */
+  private save() {
+    // Saved values are checked on the way out too, so a bug can't write a save the game can't read.
+    this.progress = cleanProgress(this.progress);
+    if (saveProgress(this.progress) || !this.saving) return;
+    this.saving = false;
+    this.say(TEXT.cantSave);
+    for (const name of ["title", "help"] as const) {
+      const el = this.root.querySelector<HTMLElement>(`[data-screen="${name}"]`);
+      if (el && !el.querySelector("[data-cant-save]")) {
+        el.querySelector(".ss-actions")?.insertAdjacentHTML("afterend", this.saveWarning());
+      }
+    }
+  }
+
   /** Turns sound or vibration off or on, saves the choice and updates every switch. */
   private toggleSetting(name: keyof Settings) {
     const settings = settingsOf(this.progress);
     settings[name] = !settings[name];
     this.progress = { ...this.progress, settings };
-    saveProgress(this.progress);
+    this.save();
     this.sound.soundOn = settings.sound;
     this.sound.vibrationOn = settings.vibration;
     this.sound.unlock();
     this.syncSettings();
-    this.say(`${name === "sound" ? "Sound" : "Vibration"} ${settings[name] ? "on" : "off"}.`);
+    this.say(TEXT.say.setting(name, settings[name]));
   }
 
   private syncSettings() {
@@ -394,7 +478,7 @@ export class SankofaSnake {
   }
 
   /** Leaves a run for the screen it was started from. */
-  private back() {
+  private leaveRun() {
     this.show(this.mode === "daily" ? "daily" : "levels");
   }
 
@@ -405,10 +489,11 @@ export class SankofaSnake {
   /** The heading over the board, such as "Level 3: Market" or "Daily challenge: Ocean". */
   private runTitle() {
     const level = LEVELS[this.levelIndex];
-    if (this.mode === "daily") return `Daily challenge: ${this.state.level.name}`;
-    if (this.mode === "free") return `Free play: ${level.name}`;
-    if (this.mode === "practice") return `Practice: ${level.name}`;
-    return `Level ${level.number}: ${level.name}`;
+    const r = TEXT.run;
+    if (this.mode === "daily") return r.daily(this.state.level.name);
+    if (this.mode === "free") return r.free(level.name);
+    if (this.mode === "practice") return r.practice(level.name);
+    return r.level(level.number, level.name);
   }
 
   private isUnlocked(i: number) {
@@ -442,38 +527,87 @@ export class SankofaSnake {
     else if (mode === "practice") level = practiceLevel(LEVELS[i]);
     else level = LEVELS[i];
     this.levelIndex = i;
+    this.stopLoop();
     this.state = createGame(level, seed);
     this.part("game").className = `ss-screen ss-game ss-world-${level.world}`;
     this.show("game");
-    this.say(`${this.runTitle()}. ${level.challenge} Press an arrow key or swipe to start.`);
+    this.say(TEXT.say.runStart(this.runTitle(), level.challenge, TEXT.run.start[this.input]));
     // The power-up line keeps its space on levels with power-ups, so the board doesn't jump.
     this.part("game").querySelector<HTMLElement>('[data-hud="power"]')!.hidden = !level.powerUps;
     this.updateHud();
     this.updateOverlay();
-    this.resize();
+    // The board is drawn once here. It is drawn again on every frame only while the snake moves.
+    this.guard(() => this.resize());
+  }
+
+  /** Starts drawing frames. Frames run only while the snake moves, which saves battery. */
+  private startLoop() {
+    if (this.frameId || this.destroyed) return;
     this.lastTime = 0;
     this.carry = 0;
-    cancelAnimationFrame(this.frameId);
     this.frameId = requestAnimationFrame((t) => this.frame(t));
   }
 
+  private stopLoop() {
+    cancelAnimationFrame(this.frameId);
+    this.frameId = 0;
+  }
+
   private frame(time: number) {
+    this.frameId = 0;
     if (this.screen !== "game") return;
-    const dt = this.lastTime ? Math.min(time - this.lastTime, 250) : 0;
-    this.lastTime = time;
-    if (this.state.status === "running") {
-      this.carry += dt;
-      // Catch up on missed moves after a slow frame, but never more than a few at once.
-      for (let n = 0; n < 4 && this.carry >= moveMs(this.state) && this.state.status === "running"; n++) {
-        this.carry -= moveMs(this.state);
-        const result = tick(this.state);
-        this.apply(result.state, result.events);
+    this.guard(() => {
+      const dt = this.lastTime ? Math.min(time - this.lastTime, 250) : 0;
+      this.lastTime = time;
+      if (this.state.status === "running") {
+        this.carry += dt;
+        // Catch up on missed moves after a slow frame, but never more than a few at once.
+        for (let n = 0; n < 4 && this.carry >= moveMs(this.state) && this.state.status === "running"; n++) {
+          this.carry -= moveMs(this.state);
+          const result = tick(this.state);
+          this.apply(result.state, result.events);
+        }
       }
-    } else {
-      this.carry = 0;
+      this.drawBoard(time);
+      // A paused, waiting or finished board stays as it was drawn, so no more frames are needed.
+      if (this.state.status === "running" && !this.frameId) {
+        this.frameId = requestAnimationFrame((t) => this.frame(t));
+      }
+    });
+  }
+
+  private drawBoard(time = performance.now()) {
+    if (!this.layout) return;
+    draw(this.ctx, this.state, this.layout, time, this.reduceMotion, this.scenery);
+  }
+
+  /** Runs a step of the game, and shows a message with a way out if it fails. */
+  private guard(step: () => void) {
+    if (this.destroyed) return;
+    try {
+      step();
+    } catch (error) {
+      this.fail(error);
     }
-    draw(this.ctx, this.state, this.layout, time, this.reduceMotion);
-    this.frameId = requestAnimationFrame((t) => this.frame(t));
+  }
+
+  /** Stops the board after an error and offers a way back to the title, instead of a frozen board. */
+  private fail(error: unknown) {
+    this.stopLoop();
+    console.error("Sankofa Snake stopped because of an error.", error);
+    const overlay = this.root.querySelector<HTMLElement>("[data-overlay]");
+    if (!overlay) return;
+    overlay.hidden = false;
+    overlay.classList.remove("ss-overlay-passive");
+    overlay.innerHTML = `
+      <div class="ss-panel" role="alert">
+        <p class="ss-overlay-title">${esc(TEXT.run.errorTitle)}</p>
+        <p>${esc(TEXT.run.error)}</p>
+        <div class="ss-actions"><button class="ss-btn ss-primary" data-go="title">${esc(TEXT.buttons.toTitle)}</button></div>
+      </div>`;
+    this.wireNav(overlay);
+    overlay.querySelector<HTMLElement>(".ss-primary")?.focus();
+    this.say(TEXT.run.errorTitle);
   }
 
   private onKey(e: KeyboardEvent) {
@@ -493,10 +627,12 @@ export class SankofaSnake {
   }
 
   private command(c: Command) {
-    if (!this.state) return;
+    if (!this.state || this.screen !== "game") return;
     this.sound.unlock();
-    if (c.type === "turn") this.apply(turn(this.state, c.dir));
-    else this.apply(togglePause(this.state));
+    this.guard(() => {
+      if (c.type === "turn") this.apply(turn(this.state, c.dir));
+      else this.apply(togglePause(this.state));
+    });
   }
 
   private apply(next: GameState | undefined, events: GameEvent[] = []) {
@@ -506,50 +642,50 @@ export class SankofaSnake {
     for (const e of events) this.onEvent(e);
     if (next.status !== before) {
       this.updateOverlay();
-      if (next.status === "paused") this.say("Paused.");
-      if (next.status === "running" && before === "paused") this.say("Playing.");
+      if (next.status === "paused") this.say(TEXT.say.paused);
+      if (next.status === "running" && before === "paused") this.say(TEXT.say.playing);
+      if (next.status === "running") this.startLoop();
     }
     this.updateHud();
   }
 
   private onEvent(e: GameEvent) {
     const level = this.state.level;
+    const say = TEXT.say;
     this.sound.play(e, this.state.eaten);
-    if (e.type === "ate") {
-      const count = this.mode === "free" ? `Cowrie ${this.state.eaten}` : `Cowrie ${this.state.eaten} of ${level.goal}`;
-      this.say(`${count}. Score ${this.state.score}.`);
-    }
-    if (e.type === "bump") this.say(`${bumpText(this.state)} Choose a new direction.`);
-    if (e.type === "speedup") this.say("The snake is faster now.");
-    if (e.type === "powerAppeared") this.say(`A ${POWER_NAME[e.kind]} power-up appeared.`);
-    if (e.type === "power") this.say(POWER_TEXT[e.kind]);
-    if (e.type === "passed") this.say("The snake passed through its tail.");
+    if (e.type === "ate") this.say(say.ate(this.state.eaten, this.state.score, this.mode === "free" ? undefined : level.goal));
+    if (e.type === "bump") this.say(say.bump(bumpText(this.state)));
+    if (e.type === "speedup") this.say(say.speedup);
+    if (e.type === "powerAppeared") this.say(say.powerAppeared(TEXT.power.name[e.kind]));
+    if (e.type === "power") this.say(TEXT.power.text[e.kind]);
+    if (e.type === "passed") this.say(say.passed);
     if (e.type === "crash") {
       if (this.mode === "levels") this.progress = recordRun(this.progress, level.id, this.state.score, 0, false);
       if (this.mode === "daily") this.progress = recordDaily(this.progress, this.dailyDate, this.state.score, false);
       if (this.mode === "free") this.progress = recordFree(this.progress, this.freeKey(LEVELS[this.levelIndex]), this.state.eaten);
-      saveProgress(this.progress);
-      this.say(`${crashText(this.state)} Score ${this.state.score}.`);
+      this.save();
+      this.say(say.crash(crashText(this.state), this.state.score));
     }
     if (e.type === "cleared") {
       this.lastClear = e;
       if (this.mode === "levels") this.progress = recordRun(this.progress, level.id, e.score, e.stars, true);
       if (this.mode === "daily") this.progress = recordDaily(this.progress, this.dailyDate, e.score, true);
-      saveProgress(this.progress);
-      if (this.mode === "practice") this.say(`Practice run complete. Score ${e.score}.`);
-      else this.say(`${this.mode === "daily" ? "Daily challenge" : "Level"} cleared with ${e.stars} of 3 stars. Score ${e.score}.`);
+      this.save();
+      if (this.mode === "practice") this.say(say.practiceDone(e.score));
+      else this.say(say.cleared(this.mode === "daily", e.stars, e.score));
     }
   }
 
   private updateHud() {
     const s = this.state;
     const el = this.part("game");
+    const h = TEXT.hud;
     const set = (name: string, text: string) => {
       const node = el.querySelector(`[data-hud="${name}"]`)!;
       if (node.textContent !== text) node.textContent = text;
     };
     set("level", this.runTitle());
-    set("eaten", this.mode === "free" ? String(s.eaten) : `${s.eaten} of ${s.level.goal}`);
+    set("eaten", h.eaten(s.eaten, this.mode === "free" ? undefined : s.level.goal));
     set("score", String(s.score));
     let best = 0;
     if (this.mode === "levels") best = this.progress.levels[s.level.id]?.best ?? 0;
@@ -558,13 +694,12 @@ export class SankofaSnake {
     // Free play keeps the most cowries in one run, so its best counts cowries.
     set("best", String(Math.max(best, this.mode === "free" ? s.eaten : s.score)));
     el.querySelector<HTMLElement>('[data-hud="best"]')!.parentElement!.hidden = this.mode === "practice";
-    const power = [
-      isSlow(s) ? `Slow motion for ${s.slowUntil - s.moves} more moves` : "",
-      s.passes > 0 ? (s.passes === 1 ? "One pass through the tail" : `${s.passes} passes through the tail`) : "",
-    ].filter(Boolean).join(". ");
+    const power = [isSlow(s) ? h.slow(s.slowUntil - s.moves) : "", s.passes > 0 ? h.passes(s.passes) : ""]
+      .filter(Boolean)
+      .join(". ");
     set("power", power);
     const pauseBtn = el.querySelector<HTMLButtonElement>("[data-pause]")!;
-    pauseBtn.textContent = s.status === "paused" ? "Resume" : "Pause";
+    pauseBtn.textContent = s.status === "paused" ? TEXT.buttons.resume : TEXT.buttons.pause;
     pauseBtn.disabled = s.status !== "running" && s.status !== "paused";
   }
 
@@ -573,66 +708,64 @@ export class SankofaSnake {
     const overlay = this.part("game").querySelector<HTMLElement>("[data-overlay]")!;
     const level = s.level;
     const mode = this.mode;
+    const r = TEXT.run;
+    const b = TEXT.buttons;
     const hasNext = mode === "levels" && this.levelIndex < LEVELS.length - 1;
-    const back = `<button class="ss-btn" data-back>Back</button>`;
+    const back = `<button class="ss-btn" data-back>${esc(b.back)}</button>`;
     let html = "";
     if (s.status === "ready" && s.bump) {
       html = `
-        <p class="ss-overlay-title">Bump</p>
-        <p>${bumpText(s)} Choose a new direction to keep going.</p>`;
+        <p class="ss-overlay-title">${esc(r.bumpTitle)}</p>
+        <p>${esc(bumpText(s))} ${esc(r.bumpGo)}</p>`;
     } else if (s.status === "ready") {
       html = `
-        <p class="ss-overlay-title">${this.runTitle()}</p>
-        <p>${level.challenge}</p>
-        <p class="ss-overlay-hint">Press an arrow key or swipe to start.</p>`;
+        <p class="ss-overlay-title">${esc(this.runTitle())}</p>
+        <p>${esc(level.challenge)}</p>
+        <p class="ss-overlay-hint">${esc(r.start[this.input])}</p>`;
     } else if (s.status === "paused") {
       html = `
-        <p class="ss-overlay-title">Paused</p>
+        <p class="ss-overlay-title">${esc(r.paused)}</p>
         <div class="ss-actions">
-          <button class="ss-btn ss-primary" data-resume>Resume</button>
+          <button class="ss-btn ss-primary" data-resume>${esc(b.resume)}</button>
           ${back}
         </div>`;
     } else if (s.status === "over") {
       const best = mode === "free" ? this.progress.free?.[this.freeKey(LEVELS[this.levelIndex])] ?? 0 : 0;
-      const tally =
-        mode === "free"
-          ? `You collected ${s.eaten} ${s.eaten === 1 ? "cowrie" : "cowries"}. Your best here is ${best}.`
-          : `You collected ${s.eaten} of ${level.goal} cowries. Score ${s.score}.`;
+      const tally = mode === "free" ? r.freeTally(s.eaten, best) : r.tally(s.eaten, level.goal, s.score);
       html = `
-        <p class="ss-overlay-title">Game over</p>
-        <p>${crashText(s)}</p>
-        <p>${tally}</p>
+        <p class="ss-overlay-title">${esc(r.over)}</p>
+        <p>${esc(crashText(s))}</p>
+        <p>${esc(tally)}</p>
         <div class="ss-actions">
-          <button class="ss-btn ss-primary" data-again>Play again</button>
+          <button class="ss-btn ss-primary" data-again>${esc(b.playAgain)}</button>
           ${back}
         </div>`;
     } else if (s.status === "cleared" && mode === "practice") {
       html = `
-        <p class="ss-overlay-title">Practice run complete</p>
-        <p>You collected all ${level.goal} cowries. Score ${s.score}.</p>
+        <p class="ss-overlay-title">${esc(r.practiceDone)}</p>
+        <p>${esc(r.practiceTally(level.goal, s.score))}</p>
         <div class="ss-actions">
-          <button class="ss-btn ss-primary" data-again>Practice again</button>
+          <button class="ss-btn ss-primary" data-again>${esc(b.practiceAgain)}</button>
           ${back}
         </div>`;
     } else if (s.status === "cleared" && this.lastClear) {
       const { stars, timeBonus } = this.lastClear;
       let note = "";
       if (mode === "daily") {
-        const n = currentStreak(this.progress, this.dailyDate);
-        note = `<p>Your streak is ${n} ${n === 1 ? "day" : "days"}. Come back tomorrow for a new challenge.</p>`;
+        note = `<p>${esc(r.dailyStreak(currentStreak(this.progress, this.dailyDate)))}</p>`;
       } else {
         const best = this.progress.levels[level.id]?.stars ?? stars;
-        if (best > stars) note = `<p>Your best on this level is ${best} stars.</p>`;
-        if (!hasNext) note += `<p>You've cleared all nine levels.</p>`;
+        if (best > stars) note = `<p>${esc(r.bestStars(best))}</p>`;
+        if (!hasNext) note += `<p>${esc(r.allCleared)}</p>`;
       }
       html = `
-        <p class="ss-overlay-title">${mode === "daily" ? "Daily challenge cleared" : "Level cleared"}</p>
-        <p class="ss-stars ss-big" aria-label="${stars} of 3 stars">${starText(stars)}</p>
-        <p>Score ${s.score}, including a time bonus of ${timeBonus}.</p>
+        <p class="ss-overlay-title">${esc(mode === "daily" ? r.dailyCleared : r.cleared)}</p>
+        <p class="ss-stars ss-big" aria-label="${esc(r.stars(stars))}">${starText(stars)}</p>
+        <p>${esc(r.bonus(s.score, timeBonus))}</p>
         ${note}
         <div class="ss-actions">
-          ${hasNext ? `<button class="ss-btn ss-primary" data-next>Next level</button>` : ""}
-          <button class="ss-btn${hasNext ? "" : " ss-primary"}" data-again>Play again</button>
+          ${hasNext ? `<button class="ss-btn ss-primary" data-next>${esc(b.nextLevel)}</button>` : ""}
+          <button class="ss-btn${hasNext ? "" : " ss-primary"}" data-again>${esc(b.playAgain)}</button>
           ${back}
         </div>`;
     }
@@ -642,17 +775,24 @@ export class SankofaSnake {
     overlay.querySelector("[data-resume]")?.addEventListener("click", () => this.command({ type: "pause" }));
     overlay.querySelector("[data-again]")?.addEventListener("click", () => this.startRun(mode, this.levelIndex));
     overlay.querySelector("[data-next]")?.addEventListener("click", () => this.startRun("levels", this.levelIndex + 1));
-    overlay.querySelector("[data-back]")?.addEventListener("click", () => this.back());
+    overlay.querySelector("[data-back]")?.addEventListener("click", () => this.leaveRun());
     this.wireNav(overlay);
     overlay.querySelector<HTMLElement>(".ss-primary")?.focus();
   }
 
   private resize() {
-    if (!this.state || !this.canvas) return;
-    const stage = this.part("game").querySelector<HTMLElement>("[data-stage]")!;
+    if (!this.state || !this.canvas || this.screen !== "game") return;
+    const game = this.part("game");
+    const stage = game.querySelector<HTMLElement>("[data-stage]")!;
     const width = Math.min(stage.clientWidth || this.root.clientWidth, 560);
-    // Leave room for the score line and buttons, so the whole board fits on a phone screen.
-    const height = Math.max(260, window.innerHeight - 210);
+    // Leave room for the score line, the buttons and the hint, so the whole game fits on the screen.
+    // On a phone turned sideways they sit beside the board, so the board can use nearly the full height.
+    let chrome = 48;
+    if (!window.matchMedia?.(SIDEWAYS).matches) {
+      for (const sel of [".ss-hud", ".ss-bar", ".ss-hint"]) chrome += game.querySelector<HTMLElement>(sel)?.offsetHeight ?? 0;
+      chrome += 40;
+    }
+    const height = Math.max(200, window.innerHeight - chrome);
     const size = Math.floor(Math.min(width, height));
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     this.canvas.style.width = `${size}px`;
@@ -661,11 +801,11 @@ export class SankofaSnake {
     this.canvas.height = Math.round(size * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.layout = layoutFor(size, this.state.level);
-    draw(this.ctx, this.state, this.layout, performance.now(), this.reduceMotion);
+    this.drawBoard();
   }
 
   private say(text: string) {
-    const live = this.root.querySelector<HTMLElement>("[data-live]")!;
-    live.textContent = text;
+    const live = this.root.querySelector<HTMLElement>("[data-live]");
+    if (live) live.textContent = text;
   }
 }
