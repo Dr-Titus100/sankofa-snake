@@ -5,6 +5,7 @@ import {
   allOpenConnected,
   currentKeys,
   moveVehicles,
+  narrowPassages,
   newLayout,
   obstacleKeys,
   startZone,
@@ -28,6 +29,8 @@ describe("new layouts", () => {
         const made = newLayout(level, seed);
         expect(validateLevel(made), `seed ${seed}`).toEqual([]);
         expect(allOpenConnected(made), `seed ${seed}`).toBe(true);
+        // No part of the board is reached through one passage only, where a long snake would be trapped.
+        expect(narrowPassages(made), `seed ${seed}`).toEqual([]);
         // The start zone stays clear.
         const blocked = obstacleKeys(made);
         const currents = currentKeys(made);

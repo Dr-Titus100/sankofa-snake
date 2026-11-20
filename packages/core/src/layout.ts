@@ -367,5 +367,77 @@ function newMaze(level: LevelDef, r: Rand): LevelDef {
   const sy = level.start.y - (level.start.y % 2);
   const sx = level.start.x;
   for (let x = Math.max(0, sx - 3); x <= Math.min(width - 1, sx + 4); x++) open(x, sy);
-  return { ...level, start: { ...level.start, y: sy }, map: grid.map((row) => row.join("")) };
+  const made = (): LevelDef => ({ ...level, start: { ...level.start, y: sy }, map: grid.map((row) => row.join("")) });
+  // A part of the maze reached through one passage only is a trap: a long snake that goes in
+  // can't turn round to come back out. Open a wall from each such part to the rest of the maze.
+  for (let i = 0; i < 200; i++) {
+    const bridge = narrowPassages(made())[0];
+    if (!bridge) break;
+    const blocked = obstacleKeys(made());
+    const side = reachable(made(), blocked, bridge[0], bridge[1]);
+    const doors: [number, number][] = [];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        // A wall between two passage cells: one coordinate odd and the other even.
+        if (grid[y][x] !== "#" || (x % 2) + (y % 2) !== 1) continue;
+        const [a, b] = x % 2 ? [`${x - 1},${y}`, `${x + 1},${y}`] : [`${x},${y - 1}`, `${x},${y + 1}`];
+        if (blocked.has(a) || blocked.has(b) || !inBoard(level, a) || !inBoard(level, b)) continue;
+        if (side.has(a) !== side.has(b)) doors.push([x, y]);
+      }
+    }
+    if (!doors.length) break;
+    const [dx, dy] = doors[below(r, doors.length)];
+    open(dx, dy);
+  }
+  return made();
+}
+
+const inBoard = (level: LevelDef, k: string) => {
+  const [x, y] = k.split(",").map(Number);
+  return x >= 0 && y >= 0 && x < level.width && y < level.height;
+};
+
+/** The open cells reachable from one cell without crossing to the other end of a passage. */
+function reachable(level: LevelDef, blocked: Set<string>, from: string, not: string): Set<string> {
+  const seen = new Set([from]);
+  const stack = [from];
+  while (stack.length) {
+    const [x, y] = stack.pop()!.split(",").map(Number);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const k = `${x + dx},${y + dy}`;
+      if (seen.has(k) || blocked.has(k) || !inBoard(level, k) || (k === not && `${x},${y}` === from)) continue;
+      seen.add(k);
+      stack.push(k);
+    }
+  }
+  return seen;
+}
+
+/**
+ * The passages that are the only way into a part of the board, as pairs of cells. Removing one
+ * splits the open cells in two. A board with none has a loop through every passage.
+ */
+export function narrowPassages(level: LevelDef): [string, string][] {
+  const blocked = obstacleKeys(level);
+  const found: [string, string][] = [];
+  const order = new Map<string, number>();
+  const low = new Map<string, number>();
+  let time = 0;
+  const visit = (u: string, parent: string | null) => {
+    order.set(u, time);
+    low.set(u, time++);
+    const [x, y] = u.split(",").map(Number);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const v = `${x + dx},${y + dy}`;
+      if (v === parent || blocked.has(v) || !inBoard(level, v)) continue;
+      if (order.has(v)) low.set(u, Math.min(low.get(u)!, order.get(v)!));
+      else {
+        visit(v, u);
+        low.set(u, Math.min(low.get(u)!, low.get(v)!));
+        if (low.get(v)! > order.get(u)!) found.push([u, v]);
+      }
+    }
+  };
+  visit(`${level.start.x},${level.start.y}`, null);
+  return found;
 }
