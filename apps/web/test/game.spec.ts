@@ -189,10 +189,11 @@ test("a play view and a help view on one page, or in two tabs, share switches an
     localStorage.setItem(key, JSON.stringify({ ...saved, levels: { farm: { best: 300, stars: 2, cleared: true } } }));
   }, SAVE_KEY);
   await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).levels.farm?.cleared, SAVE_KEY)).toBe(true);
-  await help.getByRole("button", { name: "Vibration", exact: true }).click();
+  // Sound, since iPhones have no Vibration switch.
+  await help.getByRole("button", { name: "Sound", exact: true }).click();
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), SAVE_KEY);
   expect(saved.levels.farm).toEqual({ best: 300, stars: 2, cleared: true });
-  expect(saved.settings).toEqual({ sound: false, vibration: false });
+  expect(saved.settings).toEqual({ sound: true, vibration: true });
 });
 
 test("only the first level is open on a first visit", async ({ page }) => {
