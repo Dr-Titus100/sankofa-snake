@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1 (2026-11-20)
+
+- The Sound switch in the game bar is gold while the sound is on, the same as the switches on How to play. Sound starts on, and a tap turns it off.
+
 ## 0.8.0 (2026-11-20)
 
 - Phones and tablets get arrow buttons under the board. The snake turns as soon as a finger touches an arrow, and swiping on the board still works. Turned sideways, the arrows sit beside the board with Pause, Sound and Back. Computers don't show them.

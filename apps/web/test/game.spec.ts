@@ -156,6 +156,31 @@ test("the sound and vibration switches start on and are remembered", async ({ pa
   await expect(page.locator(".ss-bar").getByRole("button", { name: "Sound" })).toHaveAttribute("aria-pressed", "false");
 });
 
+test("the Sound pill in the game bar starts on in gold and the player can switch it off", async ({ page }) => {
+  await page.goto("/?seed=1&layout=fixed");
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  const sound = page.locator(".ss-bar").getByRole("button", { name: "Sound" });
+  const gold = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.color = getComputedStyle(document.querySelector(".ss-root")!).getPropertyValue("--ss-gold");
+    document.body.append(probe);
+    const value = getComputedStyle(probe).color;
+    probe.remove();
+    return value;
+  });
+  await expect(sound).toHaveAttribute("aria-pressed", "true");
+  await page.mouse.move(0, 0);
+  await expect(sound).toHaveCSS("background-color", gold);
+  await sound.click();
+  await page.mouse.move(0, 0);
+  await expect(sound).toHaveAttribute("aria-pressed", "false");
+  await expect(sound).not.toHaveCSS("background-color", gold);
+  await sound.click();
+  await page.mouse.move(0, 0);
+  await expect(sound).toHaveAttribute("aria-pressed", "true");
+  await expect(sound).toHaveCSS("background-color", gold);
+});
+
 test("How to play opens with its heading in focus and a plain Back button", async ({ page }) => {
   await page.goto("/?seed=1&layout=fixed");
   await page.getByRole("button", { name: "How to play" }).click();

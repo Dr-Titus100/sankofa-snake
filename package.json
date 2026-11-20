@@ -1,6 +1,6 @@
 {
   "name": "sankofa-snake",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "A snake game in kente colors, with the Sankofa symbol as its logo.",
   "private": true,
   "type": "module",

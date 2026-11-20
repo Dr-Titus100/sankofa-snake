@@ -353,7 +353,13 @@
   font-size: 1.15rem;
   color: var(--ss-gold);
 }
-/* The Sound switch in the game bar is struck through while the sound is off. */
+/* The Sound switch in the game bar is gold while the sound is on, the same as the How to play switches. */
+.ss-btn.ss-toggle[aria-pressed="true"] {
+  border-color: var(--ss-gold);
+  background: var(--ss-gold);
+  color: var(--ss-black);
+}
+/* It is struck through while the sound is off. */
 .ss-btn.ss-toggle[aria-pressed="false"] {
   border-style: dashed;
   text-decoration: line-through;
