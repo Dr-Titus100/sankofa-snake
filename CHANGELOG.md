@@ -5,7 +5,7 @@
 - Each world has its own instrument. The Farm keeps the wooden gyil, the Park has a bamboo flute, the Market an iron bell, the City a guitar string, the Road a horn, the Lab a glass chime, the Maze a low log drum, the Ocean water drops, and the Weaving village the gyil and the bell together. The tunes stay the same.
 - Trotros are painted cream, green, blue or red, each with a kente band, and two trotros on one board never share a color. Taxis stay gold with red corners, so the two are easy to tell apart.
 - The Market's stalls and the Lab's benches come in different sizes, from 2 cells up to 3 by 3, and a stall or bench several cells big is drawn as one piece.
-- Every canoe in the Ocean has its own hull color and bands.
+- Every canoe in the Ocean has its own hull color: brown, blue, red, green or cream, with a gold or red stripe.
 - Two new teaching lessons: the game loop and timing, and collision checks. Both come with questions, exercises and answers for the teacher.
 - The README has a short gameplay clip, a diagram of how the parts fit, a tests badge and a table of what the tests cover. `npm run clip` records the clip again.
 

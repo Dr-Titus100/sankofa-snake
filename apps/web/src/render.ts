@@ -852,13 +852,13 @@ function drawCurrent(ctx: CanvasRenderingContext2D, x: number, y: number, s: num
   ctx.lineCap = "butt";
 }
 
-/** Canoe paint jobs: the hull color and the bands along its side. Each canoe on the board gets its own. */
-export const CANOE_PAINT: { hull: string; bands: string[] }[] = [
-  { hull: "#7A4E2D", bands: [K.gold, K.red, K.green] },
-  { hull: "#2F6FA8", bands: [K.gold, K.cream, K.red] },
-  { hull: "#C8372D", bands: [K.gold, K.green, K.gold] },
-  { hull: "#2E8B57", bands: [K.red, K.gold, K.red] },
-  { hull: "#E9DFC8", bands: [K.red, K.green, K.red] },
+/** Canoe paint jobs: the hull color and the stripe along its side. Each canoe on the board gets its own. */
+export const CANOE_PAINT: { hull: string; band: string }[] = [
+  { hull: "#8A5A32", band: K.gold },
+  { hull: "#2F6FA8", band: K.gold },
+  { hull: "#C8372D", band: K.gold },
+  { hull: "#2E8B57", band: K.red },
+  { hull: "#E9DFC8", band: K.red },
 ];
 
 /**
@@ -877,7 +877,7 @@ export function canoeIndex(cx: number, cy: number, obstacles?: Set<string>) {
 }
 
 /**
- * A fishing canoe seen from above, pointed at both ends, painted in kente bands. A canoe three
+ * A fishing canoe seen from above, pointed at both ends, with a painted stripe. A canoe three
  * cells long is drawn as one boat: the end pieces are the bow and stern, the middle is the hull.
  * Every canoe on the board has a different hull color, like the painted canoes on Ghana's beaches.
  */
@@ -890,22 +890,41 @@ function drawCanoe(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.fillStyle = paint.hull;
   ctx.strokeStyle = K.black;
   ctx.lineWidth = Math.max(1, s * 0.06);
+  const mid = y + s * 0.5;
+  // The hull: a pointed end where the canoe stops, and a straight cut where it goes on into the next cell.
   ctx.beginPath();
-  ctx.moveTo(left ? x : x + s * 0.05, left ? top : y + s * 0.5);
+  ctx.moveTo(left ? x : x + s * 0.05, left ? top : mid);
   if (!left) ctx.quadraticCurveTo(x + s * 0.2, top, x + s * 0.5, top);
   ctx.lineTo(right ? x + s : x + s * 0.5, top);
-  if (!right) ctx.quadraticCurveTo(x + s * 0.8, top, x + s * 0.95, y + s * 0.5);
-  if (!right) ctx.quadraticCurveTo(x + s * 0.8, bottom, x + s * 0.5, bottom);
+  if (right) ctx.lineTo(x + s, bottom);
+  else {
+    ctx.quadraticCurveTo(x + s * 0.8, top, x + s * 0.95, mid);
+    ctx.quadraticCurveTo(x + s * 0.8, bottom, x + s * 0.5, bottom);
+  }
   ctx.lineTo(left ? x : x + s * 0.5, bottom);
-  if (!left) ctx.quadraticCurveTo(x + s * 0.2, bottom, x + s * 0.05, y + s * 0.5);
+  if (!left) ctx.quadraticCurveTo(x + s * 0.2, bottom, x + s * 0.05, mid);
   ctx.closePath();
   ctx.fill();
+  // The outline skips the straight cuts, so a canoe three cells long reads as one boat.
+  ctx.beginPath();
+  ctx.moveTo(left ? x : x + s * 0.5, top);
+  ctx.lineTo(right ? x + s : x + s * 0.5, top);
+  ctx.moveTo(left ? x : x + s * 0.5, bottom);
+  ctx.lineTo(right ? x + s : x + s * 0.5, bottom);
+  if (!left) {
+    ctx.moveTo(x + s * 0.5, top);
+    ctx.quadraticCurveTo(x + s * 0.2, top, x + s * 0.05, mid);
+    ctx.quadraticCurveTo(x + s * 0.2, bottom, x + s * 0.5, bottom);
+  }
+  if (!right) {
+    ctx.moveTo(x + s * 0.5, top);
+    ctx.quadraticCurveTo(x + s * 0.8, top, x + s * 0.95, mid);
+    ctx.quadraticCurveTo(x + s * 0.8, bottom, x + s * 0.5, bottom);
+  }
   ctx.stroke();
-  // Painted bands along the side.
-  paint.bands.forEach((color, i) => {
-    ctx.fillStyle = color;
-    ctx.fillRect(x + (left ? 0 : s * 0.3), y + s * (0.32 + i * 0.12), s - (left ? 0 : s * 0.3) - (right ? 0 : s * 0.3), s * 0.1);
-  });
+  // One painted stripe along the side, so most of the hull shows its color.
+  ctx.fillStyle = paint.band;
+  ctx.fillRect(x + (left ? 0 : s * 0.3), y + s * 0.44, s - (left ? 0 : s * 0.3) - (right ? 0 : s * 0.3), s * 0.12);
 }
 
 /**
