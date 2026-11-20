@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1 (2026-11-20)
+
+- Each run picks its own mix of trotro and taxi colors, so every color turns up over a few runs. 0.9.0 gave the vehicles the same colors in the same order every time, so the Road only ever showed gold, black and orange taxis and cream and green trotros. No two trotros and no two taxis on one board share a color, and the daily challenge gives everyone the same colors.
+
 ## 0.9.0 (2026-11-20)
 
 - Each world has its own instrument. The Farm keeps the wooden gyil, the Park has a bamboo flute, the Market an iron bell, the City a guitar string, the Road a horn, the Lab a glass chime, the Maze a low log drum, the Ocean water drops, and the Weaving village the gyil and the bell together. The tunes stay the same.

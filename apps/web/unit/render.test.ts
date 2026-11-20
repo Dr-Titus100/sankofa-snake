@@ -1,7 +1,7 @@
 // Checks the paint the board gives vehicles and canoes, so players can tell them apart.
 import { describe, expect, it } from "vitest";
 import { LEVELS, newLayout, obstacleKeys } from "../../../packages/core/src";
-import { CANOE_PAINT, TAXI_PAINT, TROTRO_PAINT, canoeIndex } from "../src/render";
+import { CANOE_PAINT, TAXI_PAINT, TROTRO_PAINT, canoeIndex, vehiclePaints } from "../src/render";
 import { KENTE as K } from "../src/logo";
 
 describe("vehicle and canoe paint", () => {
@@ -22,6 +22,27 @@ describe("vehicle and canoe paint", () => {
       const count = (kind: string) => (level.vehicles ?? []).filter((v) => v.kind === kind).length;
       expect(count("trotro"), level.name).toBeLessThanOrEqual(TROTRO_PAINT.length);
       expect(count("taxi"), level.name).toBeLessThanOrEqual(TAXI_PAINT.length);
+    }
+  });
+
+  it("shows every trotro and taxi color over a few runs, never two the same on one board", () => {
+    for (const world of ["road", "village"]) {
+      const base = LEVELS.find((l) => l.world === world)!;
+      const seen = { trotro: new Set<number>(), taxi: new Set<number>() };
+      for (let seed = 1; seed <= 200; seed++) {
+        const level = newLayout(base, seed);
+        const paints = vehiclePaints(level);
+        expect(vehiclePaints(level)).toEqual(paints);
+        for (const kind of ["trotro", "taxi"] as const) {
+          const mine = level.vehicles!.map((v, i) => (v.kind === kind ? paints[i] : -1)).filter((p) => p >= 0);
+          expect(new Set(mine).size, `${world} ${seed} ${kind}`).toBe(mine.length);
+          mine.forEach((p) => seen[kind].add(p));
+        }
+      }
+      if (world === "road") {
+        expect(seen.trotro.size).toBe(TROTRO_PAINT.length);
+        expect(seen.taxi.size).toBe(TAXI_PAINT.length);
+      }
     }
   });
 

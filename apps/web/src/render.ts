@@ -311,8 +311,8 @@ export function draw(
   }
 
   // Vehicles go on top of everything else on the board, so a collision is easy to see.
-  const count = { trotro: 0, taxi: 0 };
-  level.vehicles?.forEach((v, i) => drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout, count[v.kind]++));
+  const paints = vehiclePaints(level);
+  level.vehicles?.forEach((v, i) => drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout, paints[i]));
 
   // In slow motion the board gets a pale gold veil at its edges.
   if (isSlow(state) && state.status !== "over") {
@@ -633,10 +633,42 @@ export const TAXI_PAINT: { body: string; outline: string; glass: string }[] = [
 ];
 
 /**
+ * Which paint each vehicle gets, as an index into TROTRO_PAINT or TAXI_PAINT. Each run shuffles the
+ * colors, so over a few runs every color turns up, and no two trotros or two taxis on one board
+ * match. The shuffle comes from where the roads and vehicles are, so the same layout, such as the
+ * daily challenge's, always gets the same colors.
+ */
+export function vehiclePaints(level: LevelDef): number[] {
+  const vehicles = level.vehicles ?? [];
+  let h = 2166136261;
+  for (const v of vehicles) {
+    for (const n of [v.axis === "row" ? 1 : 2, v.lane, v.start, v.dir, v.length]) h = Math.imul(h ^ (n & 0xff), 16777619);
+  }
+  // A small seeded generator (xorshift) to shuffle each palette.
+  const next = () => {
+    h ^= h << 13;
+    h ^= h >>> 17;
+    h ^= h << 5;
+    return (h >>> 0) / 4294967296;
+  };
+  const order = (size: number) => {
+    const list = [...Array(size).keys()];
+    for (let i = size - 1; i > 0; i--) {
+      const j = Math.floor(next() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  };
+  const picks = { trotro: order(TROTRO_PAINT.length), taxi: order(TAXI_PAINT.length) };
+  const count = { trotro: 0, taxi: 0 };
+  return vehicles.map((v) => picks[v.kind][count[v.kind]++ % picks[v.kind].length]);
+}
+
+/**
  * A vehicle seen from above, with a red light at each corner like the taxis in Accra. A trotro is a
  * minibus painted cream, green, blue or silver with a kente band down its side. A taxi is smaller,
  * painted gold, black, orange, purple or teal. A vehicle that wraps around the edge of the board is
- * drawn in two pieces. `index` counts the trotros or the taxis on the board, so each one gets its own paint.
+ * drawn in two pieces. `index` picks the paint, from vehiclePaints.
  */
 function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[], layout: Layout, index = 0) {
   const paint = TROTRO_PAINT[index % TROTRO_PAINT.length];
