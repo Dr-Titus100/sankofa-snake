@@ -18,13 +18,13 @@ TEXT <- list(
   help = list(
     heading = "How to play",
     steer = list(
-      keys = "Steer with the arrow keys or W, A, S and D.",
-      touch = "Steer with the arrow buttons, or swipe on the board in the direction you want the snake to go."
+      keys = "Steer with the arrow keys or W, A, S and D. On a phone, swipe on the board or press the arrow buttons under it.",
+      touch = "Steer with the arrow buttons under the board, or swipe on the board in the direction you want the snake to go."
     ),
     rules = c(
       "Eat 20 cowrie shells to clear a level and open the next one. The snake grows longer with each shell.",
       "The run ends if the snake runs into its own tail, an obstacle or a vehicle. Vehicles stop for the snake, so cross the road in front of them or behind them. From the City on, the edge of the board is a wall too.",
-      "In the Ocean and the Weaving village, currents push the snake one square the way their arrows point when it swims across them. Swimming along a current does nothing.",
+      "In the Ocean and the Weaving village, currents push the snake one square the way their arrows point when it swims across them. Swimming along a current, the way its arrows point, makes the snake faster until it leaves the current.",
       "In the Lab, the Maze and the Weaving village, power-ups appear on the board for a short time. The gold hourglass is slow motion, the red arrows shrink the snake, and the green loop lets the snake pass through its own tail once."
     ),
     pause = list(

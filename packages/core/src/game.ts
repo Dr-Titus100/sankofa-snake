@@ -24,6 +24,8 @@ export const SLOW_MOVES = 40;
 /** In slow motion the snake moves at this share of its speed, and never slower than MIN_SPEED. */
 const SLOW_SHARE = 0.6;
 const MIN_SPEED = 3;
+/** Swimming along a current, with the current flowing the way the snake is heading, the snake moves this much faster. */
+export const CURRENT_BOOST = 1.5;
 /** How many cells the shrink power-up takes off the tail. */
 export const SHRINK_CELLS = 4;
 /** Shrinking never makes the snake shorter than this. */
@@ -94,9 +96,19 @@ export function pause(state: GameState): GameState {
 /** Whether slow motion is on right now. */
 export const isSlow = (state: GameState) => state.moves < state.slowUntil;
 
-/** Moves per second right now, counting slow motion. */
+/**
+ * Whether the snake is swimming along a current: its head is on a current that flows the way the
+ * snake is heading. It drops back to its own speed as soon as its head leaves the current.
+ */
+export function ridingCurrent(state: GameState): boolean {
+  const head = state.snake[0];
+  return head !== undefined && state.currents.get(key(head)) === state.dir;
+}
+
+/** Moves per second right now, counting slow motion and a current the snake is swimming along. */
 export function speedNow(state: GameState): number {
-  return isSlow(state) ? Math.max(MIN_SPEED, Math.round(state.speed * SLOW_SHARE)) : state.speed;
+  const speed = isSlow(state) ? Math.max(MIN_SPEED, Math.round(state.speed * SLOW_SHARE)) : state.speed;
+  return ridingCurrent(state) ? Math.round(speed * CURRENT_BOOST) : speed;
 }
 
 /** How long one move takes right now, in milliseconds. */

@@ -1,6 +1,9 @@
-MIT License
+Sankofa Snake License
 
 Copyright (c) 2026 Titus Nyarko Nde
+
+This license covers Sankofa Snake version 0.10.0 and every later version. Versions up to and
+including 0.9.1 were released under the MIT License, and copies of those versions keep it.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -9,8 +12,18 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. The above copyright notice, this permission notice and these conditions
+   shall be included in all copies or substantial portions of the Software.
+
+2. No app stores. You may not publish, distribute or sell the Software, or any
+   work based on it, through an app store, including the Apple App Store, the
+   Mac App Store, Google Play, the Microsoft Store and the Amazon Appstore,
+   without written permission from the copyright holder.
+
+3. No 3D versions. You may not make, publish or distribute a three-dimensional
+   version of the Software, or of any work based on it, without written
+   permission from the copyright holder. A three-dimensional version is one
+   that draws the game's board, snake or worlds in three dimensions.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

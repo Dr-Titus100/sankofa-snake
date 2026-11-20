@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 (2026-11-20)
 
+- In the Ocean and the Weaving village, swimming along a current, the way its arrows point, makes the snake 1.5 times as fast. It goes back to its own speed as soon as its head leaves the current. Crossing a current still pushes the snake one square sideways.
+- The first point on How to play also says how to steer on a phone: swipe on the board or press the arrow buttons under it.
+- A new license. You can still copy, change, teach with and share the code for free, but without Titus's written permission you can't publish the game or a version of it in an app store, or make a 3D version of it. Versions up to 0.9.1 keep the MIT license.
+- The release workflow stops a stuck run after 20 minutes, the same way CI does.
 - The game now also comes for Python and R. `ports/pygame` plays it in a window with Pygame, and `ports/shiny` plays it in a browser with R Shiny. Both have the nine levels, the daily challenge, free play and practice, new layouts with safe road crossings, power-ups and currents, the arrow pad, each world's instrument, the gold Sound switch, shuffled trotro and taxi colors and Reset progress. They read the same level files as the web game, and their tests replay 61 runs recorded from the TypeScript rules and check every move.
 
 ## 0.9.1 (2026-11-20)

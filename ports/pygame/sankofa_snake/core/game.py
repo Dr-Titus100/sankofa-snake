@@ -25,6 +25,8 @@ MAX_QUEUED_TURNS = 2
 SLOW_MOVES = 40
 SLOW_SHARE = 0.6
 MIN_SPEED = 3
+# Swimming along a current, the way the snake is heading, the snake moves this much faster.
+CURRENT_BOOST = 1.5
 #: How many cells the shrink power-up takes off the tail.
 SHRINK_CELLS = 4
 MIN_LENGTH = 3
@@ -137,8 +139,14 @@ def is_slow(state: GameState) -> bool:
     return state.moves < state.slow_until
 
 
+def riding_current(state: GameState) -> bool:
+    """Whether the head is on a current that flows the way the snake is heading."""
+    return bool(state.snake) and state.currents.get(state.snake[0]) == state.dir
+
+
 def speed_now(state: GameState) -> float:
-    return max(MIN_SPEED, js_round(state.speed * SLOW_SHARE)) if is_slow(state) else state.speed
+    speed = max(MIN_SPEED, js_round(state.speed * SLOW_SHARE)) if is_slow(state) else state.speed
+    return js_round(speed * CURRENT_BOOST) if riding_current(state) else speed
 
 
 def move_ms(state: GameState) -> float:
