@@ -63,6 +63,8 @@ flowchart LR
   release -.-> phones["phone apps, later"]
   core --> unit["unit tests"]
   build --> browser["browser tests"]
+  core -.->|"recorded runs"| ports["ports/<br/>Pygame and R Shiny"]
+  levels --> ports
 ```
 
 ```text
@@ -71,9 +73,14 @@ levels/          one data file per level: size, edges, speed, goal and obstacles
 apps/web/        the canvas game, its styles, its words in text.ts, and its tests
 scripts/         the build script
 docs/teaching/   lesson guides with exercises
+ports/pygame/    the game for Python and Pygame, in a window on a computer
+ports/shiny/     the game for R Shiny, in a browser
+ports/reference/ runs recorded from the TypeScript rules, which both ports must match
 ```
 
 The rules and the drawing live in separate folders on purpose. `packages/core` decides where the snake goes, what it eats and when a run ends. `apps/web` only draws the board and reads the keyboard and touch screen. The same rules will run the phone apps later.
+
+The game also comes in two more languages. `ports/pygame` plays it in a window with Python and Pygame, and `ports/shiny` plays it in a browser from R with Shiny. Each has its own copy of the rules, ported line by line, and both read the same level files. Their tests replay runs recorded from the TypeScript rules and check every move, so all three play the same game. [ports/README.md](ports/README.md) explains how to run them.
 
 A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and the Road's trotros and taxis are listed under `vehicles` in `levels/05-road.json`, each with its lane, direction, length and speed. Currents are the arrows `<`, `>`, `^` and `v` in the Ocean's map. The Lab's `powerUps` setting says which power-ups can appear, how often and for how long. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
 
@@ -112,6 +119,8 @@ Every push and pull request runs the checks in GitHub Actions, and the badge at 
 | `npm run typecheck` | Types across the rules, the web game and the tests | The whole project |
 | `npm test` | Unit tests for the rules, the layouts, the levels, saved progress, the sounds and the paint on vehicles and canoes | 90 tests |
 | `npm run test:e2e` | The built game played in a desktop browser, an Android phone and an iPhone (WebKit) | 49 tests on each, skipping the few that apply to another kind of device |
+| Pygame tests | The Python rules replaying every recorded run, and the Pygame screens, controls, saving and sounds | 21 tests |
+| Shiny tests | The R rules replaying every recorded run, and the Shiny server's screens, controls and saving | 932 checks |
 
 The browser tests also check that the game makes no network requests, which keeps the "Data not collected" answer true for the app stores.
 

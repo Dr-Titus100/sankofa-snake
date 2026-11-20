@@ -26,3 +26,36 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
         timeout-minutes: 8
       - run: npm run test:e2e
+
+  # The Pygame and R Shiny versions. Their tests replay runs recorded from the TypeScript rules.
+  ports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check the recorded runs and copied assets are up to date
+        run: |
+          node ports/reference/make-fixtures.mjs --check
+          node ports/build-assets.mjs --check
+      - name: Pygame tests
+        working-directory: ports/pygame
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/python -m unittest discover -s tests
+      - name: Install R
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends r-base-core r-cran-shiny r-cran-jsonlite r-cran-testthat
+        timeout-minutes: 8
+      - name: Shiny tests
+        working-directory: ports/shiny
+        run: Rscript -e 'testthat::test_dir("tests/testthat", stop_on_failure = TRUE)'

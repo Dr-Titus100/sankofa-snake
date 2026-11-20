@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The game now also comes for Python and R. `ports/pygame` plays it in a window with Pygame, and `ports/shiny` plays it in a browser with R Shiny. Both have the nine levels, the daily challenge, free play and practice, new layouts with safe road crossings, power-ups and currents, the arrow pad, each world's instrument, the gold Sound switch, shuffled trotro and taxi colors and Reset progress. They read the same level files as the web game, and their tests replay 61 runs recorded from the TypeScript rules and check every move.
+
 ## 0.9.1 (2026-11-20)
 
 - Each run picks its own mix of trotro and taxi colors, so every color turns up over a few runs. 0.9.0 gave the vehicles the same colors in the same order every time, so the Road only ever showed gold, black and orange taxis and cream and green trotros. No two trotros and no two taxis on one board share a color, and the daily challenge gives everyone the same colors.
