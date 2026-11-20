@@ -3,11 +3,12 @@
 ## 0.8.0 (2026-11-20)
 
 - Phones and tablets get arrow buttons under the board. The snake turns as soon as a finger touches an arrow, and swiping on the board still works. Turned sideways, the arrows sit beside the board with Pause, Sound and Back. Computers don't show them.
-- Every run has a new layout. The Market's stalls, the City's buildings, the Lab's benches, the Ocean's canoes and currents, and the Weaving village's looms and currents land in new places, and the Maze is a new maze with no dead ends. The snake's starting cells and the cells just ahead of it stay clear, and every open cell can be reached.
-- Roads cross each other on the Road and in the Weaving village. Vehicles stop for each other at crossings, the same way they stop for the snake, so they never crash. Parallel roads stay 4 cells apart, so vehicles waiting at a crossing never block each other for good.
+- Every run has a new layout. The Market's stalls, the City's buildings, the Lab's benches, the Ocean's canoes and currents, and the Weaving village's looms and currents land in new places, and the Maze is a new maze with no dead ends. Every part of a maze has at least two ways in, so a long snake never gets trapped in a loop. The snake's starting cells and the cells just ahead of it stay clear, and every open cell can be reached.
+- On about half of the runs, roads cross each other on the Road and in the Weaving village. Vehicles stop for each other at crossings, the same way they stop for the snake, so they never crash. Parallel roads stay 4 cells apart, so vehicles waiting at a crossing never block each other for good.
 - The daily challenge has one layout for everyone on the same date. `?seed=42` fixes the layout along with the cowries, and `?layout=fixed` plays every level exactly as its file draws it.
 - Choosing a level near the bottom of a long page no longer leaves the page scrolled past the game. The game scrolls back to its top when the screen changes. A page with a sticky header can set `--ss-scroll-margin` to clear it.
 - The rules and the start message on phones and tablets mention the arrow buttons.
+- The ways-to-play tabs (Levels, Free play and Practice), the edge choice and the Sound and Vibration switches on How to play have the same solid edge as the other buttons. On a computer, the tabs turn gold under the pointer.
 
 ## 0.7.0 (2026-11-20)
 

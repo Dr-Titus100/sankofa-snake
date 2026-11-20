@@ -5,6 +5,7 @@ import {
   allOpenConnected,
   currentKeys,
   moveVehicles,
+  narrowPassages,
   newLayout,
   obstacleKeys,
   startZone,
@@ -28,6 +29,8 @@ describe("new layouts", () => {
         const made = newLayout(level, seed);
         expect(validateLevel(made), `seed ${seed}`).toEqual([]);
         expect(allOpenConnected(made), `seed ${seed}`).toBe(true);
+        // No part of the board is reached through one passage only, where a long snake would be trapped.
+        expect(narrowPassages(made), `seed ${seed}`).toEqual([]);
         // The start zone stays clear.
         const blocked = obstacleKeys(made);
         const currents = currentKeys(made);
@@ -91,12 +94,11 @@ describe("new layouts", () => {
     }
   });
 
-  it("puts crossing roads on the Road and in the Weaving village", () => {
+  it("gives the Road and the Weaving village crossing roads on some runs and none on others", () => {
     for (const id of ["road", "village"]) {
-      for (const seed of SEEDS) {
-        const axes = new Set(newLayout(byId(id), seed).vehicles!.map((v) => v.axis));
-        expect(axes, `${id} seed ${seed}`).toEqual(new Set(["row", "column"]));
-      }
+      const crossing = SEEDS.filter((seed) => new Set(newLayout(byId(id), seed).vehicles!.map((v) => v.axis)).size === 2).length;
+      expect(crossing, id).toBeGreaterThan(SEEDS.length / 4);
+      expect(crossing, id).toBeLessThan(SEEDS.length);
     }
   });
 
