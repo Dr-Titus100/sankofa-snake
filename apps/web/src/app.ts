@@ -158,7 +158,7 @@ export class SankofaSnake {
    */
   back(): boolean {
     if (this.destroyed) return false;
-    const confirm = this.root.querySelector<HTMLElement>("[data-confirm]:not([hidden])");
+    const confirm = this.screen === "help" && this.part("help").querySelector<HTMLElement>("[data-confirm]:not([hidden])");
     if (confirm) {
       this.closeConfirm();
       return true;
@@ -194,6 +194,8 @@ export class SankofaSnake {
   // Screens
 
   private show(screen: Screen) {
+    // Leaving How to play cancels an open Reset progress question, so it never waits unseen.
+    if (this.screen === "help" && screen !== "help") this.closeConfirm(false);
     this.screen = screen;
     this.root.querySelectorAll<HTMLElement>(".ss-screen").forEach((el) => {
       el.hidden = el.dataset.screen !== screen;
@@ -284,11 +286,11 @@ export class SankofaSnake {
     el.querySelector<HTMLElement>("[data-confirm-no]")!.focus();
   }
 
-  private closeConfirm() {
+  private closeConfirm(focus = true) {
     const el = this.part("help");
     el.querySelector<HTMLElement>("[data-confirm]")!.hidden = true;
     el.querySelector<HTMLElement>("[data-reset-area]")!.hidden = false;
-    el.querySelector<HTMLElement>("[data-reset]")!.focus();
+    if (focus) el.querySelector<HTMLElement>("[data-reset]")!.focus();
   }
 
   private resetAll() {
