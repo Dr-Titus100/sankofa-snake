@@ -1,7 +1,8 @@
 // Short sounds and phone vibration for the game's events. The sounds are made in the browser with
-// the Web Audio API, so the game loads no sound files. Each note is a wooden, xylophone-like tone,
-// after the gyil, a xylophone from the Upper West of Ghana. The notes come from a five-note scale.
-import type { GameEvent } from "../../../packages/core/src";
+// the Web Audio API, so the game loads no sound files. Every world plays the same tunes from a
+// five-note scale, each with its own instrument. The Farm has the wooden tone of the gyil, a
+// xylophone from the Upper West of Ghana, and the other worlds have the voices listed in VOICES.
+import type { GameEvent, World } from "../../../packages/core/src";
 
 /** A pentatonic scale in hertz, from G4 up two octaves. */
 const SCALE = [392, 440, 494, 587, 659, 784, 880, 988, 1175, 1319];
@@ -17,6 +18,36 @@ interface Note {
 
 const freq = (pitch: number) => (pitch > 50 ? pitch : SCALE[Math.max(0, Math.min(SCALE.length - 1, pitch))]);
 
+/**
+ * How one world's instrument sounds. Each note is a few sine or other waves played together.
+ * `partials` lists them as [pitch ratio, loudness, how long it rings as a share of the note].
+ */
+export interface Voice {
+  /** What the voice is meant to sound like, for people reading the code. */
+  name: string;
+  wave: OscillatorType;
+  /** Moves every note up or down. 2 is an octave up, 0.5 an octave down. */
+  octave: number;
+  partials: readonly (readonly [number, number, number])[];
+  /** Seconds the note takes to reach full volume. A flute starts softly, a bell at once. */
+  attack: number;
+  /** Where the pitch ends up as a share of where it starts, for a sliding note. 1 stays put. */
+  bend: number;
+}
+
+/** One instrument for each world, so each world sounds a little different. */
+export const VOICES: Record<World, Voice> = {
+  farm: { name: "gyil, a wooden xylophone", wave: "sine", octave: 1, partials: [[1, 0.9, 1], [3.9, 0.25, 0.3]], attack: 0.006, bend: 1 },
+  park: { name: "atenteben, a bamboo flute", wave: "sine", octave: 2, partials: [[1, 0.7, 1], [2, 0.1, 0.8]], attack: 0.04, bend: 1 },
+  market: { name: "an iron bell", wave: "sine", octave: 1.5, partials: [[1, 0.6, 1], [2.76, 0.3, 0.5], [5.4, 0.12, 0.25]], attack: 0.003, bend: 1 },
+  city: { name: "a palm-wine guitar string", wave: "triangle", octave: 1, partials: [[1, 0.8, 0.8], [2, 0.3, 0.4]], attack: 0.004, bend: 1 },
+  road: { name: "a trotro horn", wave: "square", octave: 0.5, partials: [[1, 0.2, 0.7], [1.01, 0.16, 0.7]], attack: 0.01, bend: 1 },
+  lab: { name: "a glass chime", wave: "sine", octave: 2, partials: [[1, 0.55, 1], [2.4, 0.25, 0.6], [4.2, 0.08, 0.3]], attack: 0.002, bend: 1 },
+  maze: { name: "a low log drum", wave: "sine", octave: 0.5, partials: [[1, 1, 0.8], [3.9, 0.3, 0.3]], attack: 0.006, bend: 1 },
+  ocean: { name: "a water drop", wave: "sine", octave: 1, partials: [[1, 0.8, 1]], attack: 0.004, bend: 1.5 },
+  village: { name: "a gyil and an iron bell together", wave: "sine", octave: 1, partials: [[1, 0.8, 1], [2.76, 0.25, 0.4], [3.9, 0.2, 0.3]], attack: 0.005, bend: 1 },
+};
+
 /** Vibration patterns in milliseconds, kept short so they don't get tiring. */
 const BUZZ: Partial<Record<GameEvent["type"], number | number[]>> = {
   ate: 12,
@@ -29,6 +60,8 @@ const BUZZ: Partial<Record<GameEvent["type"], number | number[]>> = {
 export class Sound {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** The world of the run being played, which picks the instrument. */
+  world: World = "farm";
 
   constructor(
     public soundOn: boolean,
@@ -100,18 +133,19 @@ export class Sound {
       const start = now + n.at;
       const length = n.length ?? 0.35;
       const volume = n.volume ?? 1;
-      // A wooden bar rings with a strong first note and a quieter, quickly fading overtone.
-      for (const [ratio, level, decay] of [
-        [1, 0.9, length],
-        [3.9, 0.25, length * 0.3],
-      ] as const) {
+      const voice = VOICES[this.world] ?? VOICES.farm;
+      // Each partial rings for its own share of the note, so the overtones fade before the main tone.
+      for (const [ratio, level, share] of voice.partials) {
+        const decay = length * share;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq(n.pitch) * ratio;
+        osc.type = voice.wave;
+        const pitch = freq(n.pitch) * voice.octave * ratio;
+        osc.frequency.setValueAtTime(pitch, start);
+        if (voice.bend !== 1) osc.frequency.exponentialRampToValueAtTime(pitch * voice.bend, start + Math.min(0.12, decay));
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(level * volume, start + 0.006);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + decay);
+        gain.gain.exponentialRampToValueAtTime(level * volume, start + voice.attack);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(decay, voice.attack + 0.02));
         osc.connect(gain).connect(out);
         osc.start(start);
         osc.stop(start + decay + 0.05);

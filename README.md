@@ -4,6 +4,10 @@ A free snake game in kente colors. You steer a snake of woven kente blocks to co
 
 Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/games/sankofa-snake/).
 
+[![Tests](https://github.com/Dr-Titus100/sankofa-snake/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Dr-Titus100/sankofa-snake/actions/workflows/ci.yml)
+
+![The woven snake winding between market stalls of different sizes to collect cowrie shells](docs/media/gameplay.gif)
+
 ## Levels
 
 | Level | World | What's new |
@@ -41,13 +45,25 @@ Practice opens every level at a slower, steady speed. Running into something onl
 
 ## Sound and vibration
 
-Each event has a short sound: a cowrie, a power-up, a current, a crash and a cleared level. The notes are modeled on the gyil, a wooden xylophone from the Upper West of Ghana, and each cowrie in a run plays the next note up a five-note scale. The browser makes the sounds with the Web Audio API, so the game loads no sound files. On phones that support it, eating, crashing and clearing a level also give a short buzz.
+Each event has a short sound: a cowrie, a power-up, a current, a crash and a cleared level. Each cowrie in a run plays the next note up a five-note scale. Every world plays its notes on its own instrument: the gyil, a wooden xylophone from the Upper West of Ghana, on the Farm, a bamboo flute in the Park, an iron bell in the Market, a guitar string in the City, a horn on the Road, a glass chime in the Lab, a low log drum in the Maze, water drops in the Ocean, and the gyil and the bell together in the Weaving village. All of them are made in code. The browser makes the sounds with the Web Audio API, so the game loads no sound files. On phones that support it, eating, crashing and clearing a level also give a short buzz.
 
 ## Teaching
 
-The [teaching guides](docs/teaching/README.md) use the game's code to teach programming, with questions on paper, exercises at the keyboard and notes for the teacher. There are four lessons: the grid and how the snake moves, rules as functions, levels as data, and randomness and seeds.
+The [teaching guides](docs/teaching/README.md) use the game's code to teach programming, with questions on paper, exercises at the keyboard and notes for the teacher. There are six lessons: the grid and how the snake moves, rules as functions, levels as data, randomness and seeds, the game loop and timing, and collision checks.
 
 ## Where the code lives
+
+```mermaid
+flowchart LR
+  levels["levels/*.json<br/>one file per level"] --> core["packages/core<br/>rules, layouts and seeds"]
+  core --> web["apps/web<br/>board, controls, sound and text"]
+  web --> build["scripts/build.mjs<br/>builds dist/"]
+  build --> release["GitHub release"]
+  release --> site["titusnyarkonde.com"]
+  release -.-> phones["phone apps, later"]
+  core --> unit["unit tests"]
+  build --> browser["browser tests"]
+```
 
 ```text
 packages/core/   the rules in TypeScript, with no drawing, and their unit tests
@@ -71,11 +87,37 @@ You need Node.js 22 and Python 3 (the browser tests use Python's small web serve
 
 ```sh
 npm install
-npm test            # unit tests for the rules and for reading saved progress
+npm test            # unit tests for the rules, saved progress, the sounds and the paint
 npm run build       # builds dist/
 npm run test:e2e    # plays the built game in a desktop browser, an Android phone and an iPhone (WebKit)
 npm run dev         # rebuilds on every change at http://localhost:5173
+npm run clip        # records the gameplay clip in docs/media again
 ```
+
+### Packages and install scripts
+
+The game ships no packages. The five packages in `package.json` are tools for building and testing, each pinned to an exact version in `package-lock.json`. Two of the packages they pull in run a script when they install, and both are expected:
+
+- `esbuild` checks that its build program for your system is in place.
+- `fsevents` is only installed on macOS, where it watches files for changes.
+
+If a new package ever adds an install script, `package-lock.json` shows `"hasInstallScript": true` on it. Check it before you merge. Dependabot opens pull requests for package and GitHub Actions updates each week, and waits until a new version has been out for 14 days. CodeQL scans the code and the workflows on every push and pull request.
+
+## Tests
+
+Every push and pull request runs the checks in GitHub Actions, and the badge at the top shows how the latest run on `main` went.
+
+| Check | What it covers | Count |
+| --- | --- | --- |
+| `npm run typecheck` | Types across the rules, the web game and the tests | The whole project |
+| `npm test` | Unit tests for the rules, the layouts, the levels, saved progress, the sounds and the paint on vehicles and canoes | 90 tests |
+| `npm run test:e2e` | The built game played in a desktop browser, an Android phone and an iPhone (WebKit) | 49 tests on each, skipping the few that apply to another kind of device |
+
+The browser tests also check that the game makes no network requests, which keeps the "Data not collected" answer true for the app stores.
+
+`npm run clip` records `docs/media/gameplay.gif` again after a change to the look. A small computer player steers the snake on the Market while a browser films it. It needs ffmpeg.
+
+## Using the game on a page
 
 `npm run build` writes four files to `dist/`: `sankofa-snake.js`, `sankofa-snake.css`, `sankofa-logo.svg` and a stand-alone `index.html`, plus `SHA256SUMS`. To put the game on any page, load the script and the stylesheet and add an element with a `data-sankofa-snake` attribute:
 
@@ -102,15 +144,6 @@ game.destroy(); // stops the board, closes the sound and removes every listener
 The phone apps call `back()` from the Android back button and close only when it returns false.
 
 All the text the game shows or says is in `apps/web/src/text.ts`, ready for a translation. The level names and challenges are in the level files.
-
-### Packages and install scripts
-
-The game ships no packages. The five packages in `package.json` are tools for building and testing, each pinned to an exact version in `package-lock.json`. Two of the packages they pull in run a script when they install, and both are expected:
-
-- `esbuild` checks that its build program for your system is in place.
-- `fsevents` is only installed on macOS, where it watches files for changes.
-
-If a new package ever adds an install script, `package-lock.json` shows `"hasInstallScript": true` on it. Check it before you merge. Dependabot opens pull requests for package and GitHub Actions updates each week, and waits until a new version has been out for 14 days. CodeQL scans the code and the workflows on every push and pull request.
 
 ## Releases
 

@@ -8,6 +8,7 @@ import {
   narrowPassages,
   newLayout,
   obstacleKeys,
+  obstaclePieces,
   startZone,
   validateLevel,
   vehicleCells,
@@ -144,6 +145,16 @@ describe("new layouts", () => {
         // Each vehicle moves on at least half of its turns.
         moved.forEach((n, i) => expect(n, `${id} seed ${seed} vehicle ${i}`).toBeGreaterThan((0.5 * 1500) / vs[i].every));
       }
+    }
+  });
+});
+
+describe("obstacle sizes", () => {
+  it("has market stalls and lab benches in different sizes", () => {
+    for (const world of ["market", "lab"]) {
+      const level = LEVELS.find((l) => l.world === world)!;
+      const sizes = new Set(obstaclePieces(level).map((p) => `${p.width}x${p.height}`));
+      expect(sizes.size, world).toBeGreaterThanOrEqual(4);
     }
   });
 });

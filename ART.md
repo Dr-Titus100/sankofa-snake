@@ -1,12 +1,12 @@
 # Art and sound
 
-Titus made every picture and sound in Sankofa Snake for this game, in code. The repo holds no image, sound or font files, and the game uses no stock art, icon packs or third-party assets.
+Titus made every picture and sound in Sankofa Snake for this game, in code. The game loads no image, sound or font files, and it uses no stock art, icon packs or third-party assets. The one image in the repo, `docs/media/gameplay.gif`, is a recording of the game for the README, made by `scripts/record-clip.mjs`.
 
 | Part | How it's made | Where | First commit |
 | --- | --- | --- | --- |
 | Sankofa bird logo | Drawn as an SVG for this game | `apps/web/src/logo.ts` | 5c3edcc, 19 November 2026 |
 | Kente board frame, woven snake blocks, cowries, scenery, vehicles, power-ups and currents | Drawn on a canvas with shapes and lines | `apps/web/src/render.ts` | 5c3edcc, 19 November 2026 |
-| Notes, swishes and thuds | Made by the browser's Web Audio API from oscillators and filtered noise. No recordings | `apps/web/src/sound.ts` | 03ae4b0, 19 November 2026 |
+| Notes, swishes and thuds, with an instrument for each world | Made by the browser's Web Audio API from oscillators and filtered noise. No recordings | `apps/web/src/sound.ts` | 03ae4b0, 19 November 2026 |
 | Text | The player's system font. No font files | `apps/web/index.html`, `apps/web/src/styles.css` | |
 
 The build writes `dist/sankofa-logo.svg` from `logo.ts`, so it's the same drawing.
