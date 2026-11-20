@@ -162,10 +162,10 @@ test("the board isn't redrawn while nothing moves", async ({ page }) => {
   await page.waitForTimeout(1500);
   expect(await frames()).toBe(waiting);
 
-  // While the snake moves, frames run. Once paused, they stop again.
+  // While the snake moves, frames run. Once paused, they stop again. A busy test machine can draw
+  // slowly, so this waits for the frames to arrive instead of counting them after a fixed time.
   await page.keyboard.press("ArrowUp");
-  await page.waitForTimeout(300);
-  expect(await frames()).toBeGreaterThan(waiting + 5);
+  await expect.poll(frames, { timeout: 3000 }).toBeGreaterThan(waiting + 5);
   await page.keyboard.press("p");
   await expect(page.locator("[data-overlay]").getByText("Paused", { exact: true })).toBeVisible();
   await page.waitForTimeout(200);
