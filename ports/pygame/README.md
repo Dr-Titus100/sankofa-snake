@@ -1,6 +1,6 @@
 # Sankofa Snake for Pygame
 
-The full game in a window, written in Python with Pygame. It plays exactly like the web game. See [the ports README](../README.md) for how the rules are kept the same.
+This is the full game in a window, written in Python with Pygame. It plays exactly like the web game. [The ports README](../README.md) explains how the ports keep the rules the same.
 
 ## Play
 
@@ -18,7 +18,7 @@ python -m sankofa_snake
 - On the menus, Tab and the arrow keys move between buttons, Enter presses one, and Escape goes back.
 - `--seed 42` gives the same layouts and cowries every run. `--fixed` plays every level exactly as its file draws it.
 
-Progress is saved in a small file on your computer: `%APPDATA%\sankofa-snake` on Windows, `~/Library/Application Support/sankofa-snake` on macOS and `~/.local/share/sankofa-snake` on Linux. Set `SANKOFA_SNAKE_HOME` to keep it somewhere else. The file holds the same data as the web game keeps in the browser, and How to play has the Reset progress button.
+The game saves progress in a small file on your computer, in `%APPDATA%\sankofa-snake` on Windows, `~/Library/Application Support/sankofa-snake` on macOS and `~/.local/share/sankofa-snake` on Linux. Set `SANKOFA_SNAKE_HOME` to keep it somewhere else. The file holds the same data as the web game keeps in the browser, and How to play has the Reset progress button.
 
 ## What's where
 

@@ -1,6 +1,6 @@
 # Lesson 3: Levels as data
 
-Students learn how each level lives in a data file instead of in code, how a map can be drawn with characters, and how the game checks data for mistakes.
+Students learn how each level lives in a data file apart from the code, how a few characters can draw a whole map, and how the game checks data for mistakes.
 
 ## Start by playing
 
@@ -54,9 +54,9 @@ The `map` is a list of text rows, one row of the board per line, one character p
 
 ## A map is a template
 
-Without `?layout=fixed`, the stalls stand somewhere new every run. `newLayout` in `packages/core/src/layout.ts` reads the map as a list of pieces: each group of `#` cells that touch side by side is one piece, and each straight line of current arrows is one current. It then places every piece at a random spot, keeping one open cell around it, and keeps the cells around the snake's start clear. Last, it checks that every open cell can still be reached from the start. If a layout fails that check, it tries again.
+Without `?layout=fixed`, the stalls stand somewhere new every run. `newLayout` in `packages/core/src/layout.ts` reads the map as a list of pieces: each group of `#` cells that touch side by side is one piece, and each straight line of current arrows is one current. It then places every piece at a random spot, keeping one open cell around it, and keeps the cells around the snake's start clear. Last, it checks that the snake can still reach every open cell from the start. If a layout fails that check, it tries again.
 
-The Maze works differently. A level with `"layout": "maze"` gets a brand new maze, carved by a random walk that never visits a cell twice, then opened up so no corridor ends in a dead end.
+The Maze works differently. A level with `"layout": "maze"` gets a brand new maze. A random walk that never visits a cell twice carves it, and then the game opens it up so no corridor ends in a dead end.
 
 ## Why keep levels as data?
 

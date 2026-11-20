@@ -25,7 +25,7 @@ export const moveMs = (state: GameState) => 1000 / speedNow(state);
 
 ## The loop
 
-The browser calls `frame` in `apps/web/src/app.ts` before it draws each frame, and passes the time in milliseconds. This is the heart of it:
+The browser calls `frame` in `apps/web/src/app.ts` before it draws each frame, and passes the time in milliseconds. The main part looks like this:
 
 ```ts
 const dt = this.lastTime ? Math.min(time - this.lastTime, 250) : 0;
@@ -47,9 +47,9 @@ Read it a line at a time.
 2. `carry` saves up that time, like coins in a jar.
 3. While the jar holds enough time for a whole move, the loop takes that much out and moves the snake one cell with `tick`.
 4. Whatever is left stays in the jar for the next frame. Nothing is lost, so over a second the snake makes exactly as many moves as its speed says.
-5. The board is drawn, whether the snake moved or not.
+5. `drawBoard` draws the board, whether the snake moved or not.
 
-Then `frame` asks the browser for the next frame with `requestAnimationFrame`, but only while the snake is moving. A paused or finished board stays as it was drawn, which saves a phone's battery.
+Then `frame` asks the browser for the next frame with `requestAnimationFrame`, but only while the snake is moving. A paused or finished board stays as it is, which saves a phone's battery.
 
 ## Keeping time fair on a slow phone
 
@@ -58,7 +58,7 @@ A busy phone can miss frames. Two limits stop that from spoiling the run.
 - `dt` is never more than 250 milliseconds. If the phone freezes for a moment, the snake doesn't jump a long way across the board when it wakes up.
 - The loop makes at most 4 moves in one frame. If the phone falls behind, the snake catches up over a few frames.
 
-The game also pauses itself when the page is hidden, so switching tabs never costs the player a run.
+The game also pauses itself when the player switches tabs or apps, so leaving the page never costs the player a run.
 
 ## Time inside the rules
 
@@ -123,8 +123,8 @@ Add these tests to `packages/core/test/lesson.test.ts`.
 1. 1000 / 8 = 125 milliseconds.
 2. About 10. A frame takes 1000 / 60, about 16.7 milliseconds, and a move takes 1000 / 6, about 166.7.
 3. 6, since 10 × 0.6 = 6. At speed 4, 4 × 0.6 = 2.4 rounds to 2, which is below the floor of 3, so it is 3.
-4. 2 moves. `dt` is capped at 250 milliseconds, and a move takes 125, so the jar holds exactly two moves. Without the cap it would hold 8, and the snake would jump 8 cells at once.
-5. Paused time would count against the player, and a slow phone that drops frames would get a different time from a fast one. Counting moves also makes the time the same every time the same moves are played, which the tests rely on.
+4. 2 moves. The loop caps `dt` at 250 milliseconds, and a move takes 125, so the jar holds exactly two moves. Without the cap it would hold 8, and the snake would jump 8 cells at once.
+5. Paused time would count against the player, and a slow phone that drops frames would get a different time from a fast one. Counting moves also makes the time the same every time a player makes the same moves, which the tests rely on.
 
 For keyboard exercise 3, the body of the loop is:
 

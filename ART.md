@@ -1,6 +1,6 @@
 # Art and sound
 
-Titus made every picture and sound in Sankofa Snake for this game, in code. The game loads no image, sound or font files, and it uses no stock art, icon packs or third-party assets. The one image in the repo, `docs/media/gameplay.gif`, is a recording of the game for the README, made by `scripts/record-clip.mjs`.
+Titus made every picture and sound in Sankofa Snake for this game, in code. The game loads no image, sound or font files, and it uses no stock art, icon packs or third-party assets. The one image in the repo, `docs/media/gameplay.gif`, is a recording of the game for the README, which `scripts/record-clip.mjs` made.
 
 | Part | How it's made | Where | First commit |
 | --- | --- | --- | --- |

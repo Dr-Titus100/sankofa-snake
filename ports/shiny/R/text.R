@@ -43,7 +43,7 @@ TEXT <- list(
     vibration_note = "Vibration works on most Android phones.",
     progress = "Your progress",
     progress_note = "Scores, stars, cleared levels, the daily streak and free play bests stay on this device.",
-    confirm = "This deletes your scores, stars, cleared levels, daily streak and free play bests on this device. Your sound and vibration switches stay as they are. It can't be undone.",
+    confirm = "This deletes your scores, stars, cleared levels, daily streak and free play bests on this device. Your sound and vibration switches stay as they are. You can't undo this.",
     reset_done = "Progress deleted."
   ),
   levels = list(

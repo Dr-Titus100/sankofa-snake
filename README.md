@@ -1,6 +1,6 @@
 # Sankofa Snake
 
-A free snake game in kente colors. You steer a snake of woven kente blocks to collect cowrie shells, and each level adds a new world and one new rule. The logo is the Sankofa bird, the Akan symbol of a bird that turns its head back to pick up an egg from its back.
+Sankofa Snake is a free snake game in kente colors. You steer a snake of woven kente blocks to collect cowrie shells, and each level adds a new world and one new rule. The logo is the Sankofa bird, the Akan symbol of a bird that turns its head back to pick up an egg from its back.
 
 Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/games/sankofa-snake/).
 
@@ -22,7 +22,7 @@ Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/g
 | 8 | Ocean | Currents push the snake one square sideways when it swims across them, and speed it up when it swims along them. |
 | 9 | Weaving village | Every challenge at once: walls, looms, trotros, currents and power-ups, at top speed. |
 
-Every run places the stalls, buildings, roads, lab benches, currents, canoes and looms somewhere new, and the Maze is a new maze each time. The snake's starting cells and the cells just ahead of it stay clear, and every open cell can be reached.
+Every run places the stalls, buildings, roads, lab benches, currents, canoes and looms somewhere new, and the Maze is a new maze each time. The snake's starting cells and the cells just ahead of it stay clear, and the snake can reach every open cell.
 
 Eat 20 cowries to clear a level and open the next one. Clearing a level earns one star, and a high score with a fast finish earns up to two more.
 
@@ -45,7 +45,7 @@ Practice opens every level at a slower, steady speed. Running into something onl
 
 ## Sound and vibration
 
-Each event has a short sound: a cowrie, a power-up, a current, a crash and a cleared level. Each cowrie in a run plays the next note up a five-note scale. Every world plays its notes on its own instrument: the gyil, a wooden xylophone from the Upper West of Ghana, on the Farm, a bamboo flute in the Park, an iron bell in the Market, a guitar string in the City, a horn on the Road, a glass chime in the Lab, a low log drum in the Maze, water drops in the Ocean, and the gyil and the bell together in the Weaving village. All of them are made in code. The browser makes the sounds with the Web Audio API, so the game loads no sound files. On phones that support it, eating, crashing and clearing a level also give a short buzz.
+Each event has a short sound: a cowrie, a power-up, a current, a crash and a cleared level. Each cowrie in a run plays the next note up a five-note scale. Every world plays its notes on its own instrument: the gyil, a wooden xylophone from the Upper West of Ghana, on the Farm, a bamboo flute in the Park, an iron bell in the Market, a guitar string in the City, a horn on the Road, a glass chime in the Lab, a low log drum in the Maze, water drops in the Ocean, and the gyil and the bell together in the Weaving village. The browser makes every one of these sounds in code with the Web Audio API, so the game loads no sound files. On phones that support it, eating, crashing and clearing a level also give a short buzz.
 
 ## Teaching
 
@@ -82,7 +82,7 @@ The rules and the drawing live in separate folders on purpose. `packages/core` d
 
 The game also comes in two more languages. `ports/pygame` plays it in a window with Python and Pygame, and `ports/shiny` plays it in a browser from R with Shiny. Each has its own copy of the rules, ported line by line, and both read the same level files. Their tests replay runs recorded from the TypeScript rules and check every move, so all three play the same game. [ports/README.md](ports/README.md) explains how to run them.
 
-A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and the Road's trotros and taxis are listed under `vehicles` in `levels/05-road.json`, each with its lane, direction, length and speed. Currents are the arrows `<`, `>`, `^` and `v` in the Ocean's map. The Lab's `powerUps` setting says which power-ups can appear, how often and for how long. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
+A level is a data file. The Market's stalls, for example, are the `#` characters in `levels/03-market.json`, and `levels/05-road.json` lists the Road's trotros and taxis under `vehicles`, each with its lane, direction, length and speed. Currents are the arrows `<`, `>`, `^` and `v` in the Ocean's map. The Lab's `powerUps` setting says which power-ups can appear, how often and for how long. Adding a level means adding a file and listing it in `packages/core/src/levels.ts`. A test checks every level file for mistakes, such as a snake that starts on an obstacle.
 
 The map in a level file is a template. `newLayout` in `packages/core/src/layout.ts` takes its obstacle pieces, currents and roads and places them somewhere new for each run. With two or more roads, half of the runs have roads that cross and half have roads that all run the same way. Parallel roads stay at least 4 cells apart, farther than the longest vehicle, so vehicles waiting at a crossing never block each other for good. A level with `"layout": "maze"` gets a new maze, and `"layout": "fixed"` keeps the map exactly as drawn. Add `?layout=fixed` to the game's address to play every level as its file draws it.
 
@@ -90,7 +90,7 @@ The cowries land in random places, but the random numbers come from a seed. The 
 
 ## Working on it
 
-You need Node.js 22 and Python 3 (the browser tests use Python's small web server). The browser tests need Chromium and WebKit: `npx playwright install chromium webkit`.
+You need Node.js 22 and Python 3 (the browser tests use Python's small web server). The browser tests need Chromium and WebKit, which `npx playwright install chromium webkit` installs.
 
 ```sh
 npm install
@@ -103,10 +103,10 @@ npm run clip        # records the gameplay clip in docs/media again
 
 ### Packages and install scripts
 
-The game ships no packages. The five packages in `package.json` are tools for building and testing, each pinned to an exact version in `package-lock.json`. Two of the packages they pull in run a script when they install, and both are expected:
+The game ships no packages. The five packages in `package.json` are tools for building and testing, each pinned to an exact version in `package-lock.json`. Two of the packages they pull in run a script when they install. Both scripts are normal.
 
 - `esbuild` checks that its build program for your system is in place.
-- `fsevents` is only installed on macOS, where it watches files for changes.
+- npm installs `fsevents` only on macOS, where it watches files for changes.
 
 If a new package ever adds an install script, `package-lock.json` shows `"hasInstallScript": true` on it. Check it before you merge. Dependabot opens pull requests for package and GitHub Actions updates each week, and waits until a new version has been out for 14 days. CodeQL scans the code and the workflows on every push and pull request.
 
@@ -170,11 +170,11 @@ This game started from a snake game Titus built in R Shiny, which grew out of [A
 
 The game draws the kente patterns and the Sankofa bird in code. They draw on kente cloth and Adinkra symbols from Ghana and don't copy any named cloth design.
 
-[ART.md](ART.md) records how each drawing and sound was made.
+[ART.md](ART.md) records how Titus made each drawing and sound.
 
 ## License
 
-The Sankofa Snake License. See [LICENSE](LICENSE).
+The game comes under the Sankofa Snake License, in [LICENSE](LICENSE).
 
 You can copy, change, teach with and share the code for free, as under the MIT license, with two limits. Without Titus's written permission, you can't publish the game or a version of it in an app store, such as the App Store or Google Play, and you can't make a 3D version of it. Titus has plans for both. From 20 November 2026, every version you get from this repo or its releases, including those from before 0.10.0, comes under this license. Copies given out under the MIT license before that date, and copies passed on from them, keep the MIT rights.
 

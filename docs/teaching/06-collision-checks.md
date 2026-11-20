@@ -4,7 +4,7 @@ Students learn how the game decides whether the snake's next cell is safe, why t
 
 ## Start by playing
 
-Play the City, level 4, and run into the edge. Then play the Market and run into a stall, and finally steer the snake into its own body. Each run ends with a different message. Now try something else on the Farm: make a small loop and chase your own tail. A snake of four cells can go round a 2 by 2 square forever.
+Play the City, level 4, and run into the edge. Then play the Market and run into a stall, and finally steer the snake into its own body. Each run ends with a different message. Now try something else on the Farm. Make a small loop and chase your own tail. A snake of four cells can go round a 2 by 2 square forever.
 
 ## One cell at a time
 
@@ -27,7 +27,7 @@ if (vehicle) return fail("vehicle", vehicle);
 3. **Vehicles.** `vehicleAt` looks along each vehicle's lane for the head's cell.
 4. **The snake itself**, which comes next.
 
-The edge check has to come before `wrapCell`. Once the cell is wrapped, it is back on the board, and the game can no longer tell that it was off the edge.
+The edge check has to come before `wrapCell`. Once `wrapCell` has moved the cell, it is back on the board, and the game can no longer tell that it was off the edge.
 
 ## Following your own tail
 
@@ -45,7 +45,7 @@ On most moves the tail leaves its cell at the same moment the head arrives somew
 
 When the head lands on a cowrie, the tail stays put on that same move, so the snake is one cell longer straight away. The `grow` field can also hold extra cells for the snake to grow, and while it is above 0 the tail stays put on every move. Then the last cell counts, and running into it ends the run.
 
-The Lab's pass power-up is checked here too. With a pass, the snake goes through its body once instead of crashing.
+This check also handles the Lab's pass power-up. With a pass, the snake goes through its body once instead of crashing.
 
 ## What a crash returns
 
@@ -103,10 +103,10 @@ Add these tests to `packages/core/test/lesson.test.ts`.
 
 ## Notes for the teacher
 
-1. No, the run goes on, because the tail leaves its cell on the same move. Eating on the move before changes nothing: the cowrie added its cell on that move, so `grow` is still 0 and the tail moves away as usual. Only with `grow` at 1 does the tail stay, and then the run ends with `crash: "self"`. Keyboard exercise 3 checks this.
+1. No, the run goes on, because the tail leaves its cell on the same move. Eating on the move before changes nothing. The cowrie added its cell on that move, so `grow` is still 0 and the tail moves away as usual. Only with `grow` at 1 does the tail stay, and then the run ends with `crash: "self"`. Keyboard exercise 3 checks this.
 2. After `wrapCell`, a cell off the right edge becomes a cell on the left edge, which is on the board. The check would never see it as outside.
-3. No. The snake can never move into an obstacle, so the two never share a cell. The order still decides which message a player sees when two kinds of collision could happen, so it's worth reading carefully when adding a new kind.
-4. Two objects with the same numbers are still different objects, so a set of objects can't find `{ x: 7, y: 12 }` from a new object. The text `"7,12"` is the same text however it was made, so `has` finds it at once.
+3. No. The snake can never move into an obstacle, so the two never share a cell. The order still decides which message a player sees when two kinds of collision could happen, so read it carefully when you add a new kind.
+4. Two objects with the same numbers are still different objects, so a set of objects can't find `{ x: 7, y: 12 }` from a new object. The text `"7,12"` is the same text however the code built it, so `has` finds it at once.
 5. The vehicle waits. `moveVehicles` in `game.ts` doesn't move a vehicle into a cell the snake is in, which is why only the head can hit a vehicle.
 
 For keyboard exercise 3, the run ends with `crash: "self"`, because a snake with cells left to grow keeps its tail cell.

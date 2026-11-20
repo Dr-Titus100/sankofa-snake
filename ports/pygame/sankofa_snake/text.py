@@ -67,7 +67,7 @@ HELP = {
     "progress_note": "Scores, stars, cleared levels, the daily streak and free play bests stay on this computer.",
     "confirm": (
         "This deletes your scores, stars, cleared levels, daily streak and free play bests on this computer. "
-        "Your sound switch stays as it is. It can't be undone."
+        "Your sound switch stays as it is. You can't undo this."
     ),
     "reset_done": "Progress deleted.",
 }

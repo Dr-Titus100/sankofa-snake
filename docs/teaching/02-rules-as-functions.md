@@ -35,7 +35,7 @@ Three functions do most of the work:
 - `turn(state, dir)` returns the state after the player presses a direction.
 - `tick(state)` moves the snake one cell and returns `{ state, events }`.
 
-None of them changes the state it is given. Each one builds a new state and returns it. The code does this with the spread syntax, which copies an object and changes only the fields you name:
+None of them changes the state you pass in. Each one builds a new state and returns it. The code does this with the spread syntax, which copies an object and changes only the fields you name:
 
 ```ts
 return { ...state, status: "paused" };
@@ -59,7 +59,7 @@ It also means the old state is still there after a move. A replay, an undo butto
 
 Add these tests to `packages/core/test/lesson.test.ts`.
 
-1. A turn back into the neck is ignored:
+1. `turn` ignores a turn back into the neck:
 
    ```ts
    import { expect, it } from "vitest";
@@ -87,7 +87,7 @@ Add these tests to `packages/core/test/lesson.test.ts`.
 
 ## Notes for the teacher
 
-1. It returns the same state it was given, so nothing changes and the snake keeps going right. Turning left would put the head on the neck.
+1. It returns the state you passed in, so nothing changes and the snake keeps going right. Turning left would put the head on the neck.
 2. `crash`. In practice it returns a state with `status: "ready"` and a `bump`, so the game waits for a new direction.
 3. With only the last key, a quick up then right would lose the up, and the snake would turn right without first going up. The queue keeps up to two turns, `MAX_QUEUED_TURNS`, so quick presses happen in order.
 
