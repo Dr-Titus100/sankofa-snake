@@ -43,7 +43,7 @@ The `map` is a list of text rows, one row of the board per line, one character p
 
 ```text
 "....................",
-"..##.....##.....##..",
+"..###....##....####.",
 ```
 
 - `.` is an open cell.
@@ -72,7 +72,7 @@ That last check is `validateLevel` in `levels.ts`. It returns a list of problems
 2. The Park's speed is `{ "start": 6, "step": 1, "every": 5, "max": 10 }`. How fast is the snake after 12 cowries?
 3. Why does the game store an obstacle's place as text like `"2,1"` in a set, instead of searching the map every move?
 4. Draw a 10 by 10 level on squared paper with a wall of obstacles across the middle and one gap in it. Write its `map` as 10 strings of 10 characters.
-5. The Market's map has twelve stalls of 2 by 2 cells. When the game moves them to new places, why does it keep one open cell around each stall?
+5. The Market's map has nine stalls in different sizes, from 2 cells up to 3 by 3. When the game moves them to new places, why does it keep one open cell around each stall?
 
 ## At the keyboard
 
@@ -107,7 +107,7 @@ That last check is `validateLevel` in `levels.ts`. It returns a list of problems
 
 ## Notes for the teacher
 
-1. 40 cells: twelve in rows 2 and 3, eight in rows 7 and 8, eight in rows 12 and 13, and twelve in rows 16 and 17.
+1. 47 cells: eighteen in rows 2 and 3, eleven in rows 7 to 9, ten in rows 13 to 15, and eight in rows 16 and 17.
 2. It speeds up at 5 and 10 cowries, so after 12 it moves at 8 moves a second.
 3. Looking up a key in a set takes about the same time however many obstacles there are. Searching the map means checking many cells on every move.
 4. Answers vary. Check that every row has exactly 10 characters, and that the start cell and the two cells behind it are open.

@@ -12,6 +12,8 @@ The lessons suit students who have written a little code before, in any language
 | [2. Rules as functions](02-rules-as-functions.md) | Game state, functions that return a new state, and unit tests | 60 minutes |
 | [3. Levels as data](03-levels-as-data.md) | JSON files, maps made of characters, and checking data for mistakes | 60 minutes |
 | [4. Randomness and seeds](04-randomness-and-seeds.md) | Pseudo-random numbers, seeds, and why the daily challenge is the same for everyone | 45 minutes |
+| [5. The game loop and timing](05-game-loop-and-timing.md) | Frames and moves as two clocks, saving up leftover time, and keeping time fair on a slow phone | 45 minutes |
+| [6. Collision checks](06-collision-checks.md) | Checking one cell a move, why the order of checks matters, and why the snake can follow its own tail | 45 minutes |
 
 Each lesson has questions to answer on paper, exercises at the keyboard, and notes for the teacher with the answers.
 

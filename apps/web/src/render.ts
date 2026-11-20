@@ -311,7 +311,8 @@ export function draw(
   }
 
   // Vehicles go on top of everything else on the board, so a collision is easy to see.
-  level.vehicles?.forEach((v, i) => drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout));
+  const count = { trotro: 0, taxi: 0 };
+  level.vehicles?.forEach((v, i) => drawVehicle(ctx, v, vehicleCells(v, level, state.vehicles[i]), layout, count[v.kind]++));
 
   // In slow motion the board gets a pale gold veil at its edges.
   if (isSlow(state) && state.status !== "over") {
@@ -464,17 +465,55 @@ function drawCowrie(ctx: CanvasRenderingContext2D, x: number, y: number, s: numb
   ctx.stroke();
 }
 
+/**
+ * The box one cell of a stall or bench fills. A side that touches another cell of the same piece
+ * reaches the edge of the cell, so a stall or bench several cells big reads as one piece.
+ */
+function pieceBox(x: number, y: number, s: number, cx: number, cy: number, obstacles: Set<string> | undefined, pad: number) {
+  const has = (dx: number, dy: number) => obstacles?.has(`${cx + dx},${cy + dy}`) ?? false;
+  const sides = { left: has(-1, 0), right: has(1, 0), up: has(0, -1), down: has(0, 1) };
+  const l = x + (sides.left ? 0 : pad);
+  const t = y + (sides.up ? 0 : pad);
+  const r = x + s - (sides.right ? 0 : pad);
+  const b = y + s - (sides.down ? 0 : pad);
+  return { l, t, r, b, sides };
+}
+
+/** Draws only the outer edges of a piece's cell, the ones with no neighbor on the other side. */
+function outerEdges(ctx: CanvasRenderingContext2D, box: ReturnType<typeof pieceBox>) {
+  const { l, t, r, b, sides } = box;
+  ctx.beginPath();
+  if (!sides.up) {
+    ctx.moveTo(l, t);
+    ctx.lineTo(r, t);
+  }
+  if (!sides.down) {
+    ctx.moveTo(l, b);
+    ctx.lineTo(r, b);
+  }
+  if (!sides.left) {
+    ctx.moveTo(l, t);
+    ctx.lineTo(l, b);
+  }
+  if (!sides.right) {
+    ctx.moveTo(r, t);
+    ctx.lineTo(r, b);
+  }
+  ctx.stroke();
+}
+
 /** A market stall: a striped kente awning over a wooden crate, or produce in a stall's back row. */
-function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, backRow: boolean, _cx = 0, _cy = 0, _obstacles?: Set<string>) {
+function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, backRow: boolean, cx = 0, cy = 0, obstacles?: Set<string>) {
   const pad = s * 0.04;
+  const box = pieceBox(x, y, s, cx, cy, obstacles, pad);
   ctx.fillStyle = "#7A4E2D";
-  ctx.fillRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+  ctx.fillRect(box.l, box.t, box.r - box.l, box.b - box.t);
   ctx.strokeStyle = "#4A2E18";
   ctx.lineWidth = Math.max(1, s * 0.05);
   ctx.beginPath();
   for (const f of [0.6, 0.8]) {
-    ctx.moveTo(x + pad, y + s * f);
-    ctx.lineTo(x + s - pad, y + s * f);
+    ctx.moveTo(box.l, y + s * f);
+    ctx.lineTo(box.r, y + s * f);
   }
   ctx.stroke();
   if (backRow) {
@@ -506,7 +545,7 @@ function drawStall(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   }
   ctx.strokeStyle = K.black;
   ctx.lineWidth = Math.max(1, s * 0.06);
-  ctx.strokeRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+  outerEdges(ctx, box);
 }
 
 /**
@@ -570,11 +609,38 @@ function drawWalls(ctx: CanvasRenderingContext2D, layout: Layout) {
 }
 
 /**
- * A vehicle seen from above. A trotro is a gold minibus with a kente band down its side. A taxi is
- * smaller, gold with red corners, like the taxis in Accra. A vehicle that wraps around the edge of
- * the board is drawn in two pieces.
+ * Trotro paint jobs: a body color and the kente band down its side. Two trotros on one board get
+ * different paint, and no trotro shares a body color with a taxi. No body is red, so the red
+ * corner lights every vehicle carries always show.
  */
-function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[], layout: Layout) {
+export const TROTRO_PAINT: { body: string; band: string[] }[] = [
+  { body: "#F7EEDC", band: [K.green, K.red, K.green] },
+  { body: "#2E8B57", band: [K.gold, K.red, K.gold] },
+  { body: "#3D7CC9", band: [K.gold, K.green, K.gold] },
+  { body: "#B8BCC2", band: [K.green, K.red, K.green] },
+];
+
+/**
+ * Taxi paint jobs: the body, the outline and the windscreen. A black taxi gets a cream outline and
+ * a pale windscreen, so it still stands out on the dark road.
+ */
+export const TAXI_PAINT: { body: string; outline: string; glass: string }[] = [
+  { body: K.gold, outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: K.black, outline: K.cream, glass: "rgba(247,238,220,0.6)" },
+  { body: "#E8742A", outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: "#7B4FA0", outline: K.black, glass: "rgba(20,16,16,0.75)" },
+  { body: "#1E9E9A", outline: K.black, glass: "rgba(20,16,16,0.75)" },
+];
+
+/**
+ * A vehicle seen from above, with a red light at each corner like the taxis in Accra. A trotro is a
+ * minibus painted cream, green, blue or silver with a kente band down its side. A taxi is smaller,
+ * painted gold, black, orange, purple or teal. A vehicle that wraps around the edge of the board is
+ * drawn in two pieces. `index` counts the trotros or the taxis on the board, so each one gets its own paint.
+ */
+function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[], layout: Layout, index = 0) {
+  const paint = TROTRO_PAINT[index % TROTRO_PAINT.length];
+  const taxi = TAXI_PAINT[index % TAXI_PAINT.length];
   const { frame, cell } = layout;
   // Split the cells into runs that sit side by side on the board.
   const runs: Cell[][] = [];
@@ -611,36 +677,34 @@ function drawVehicle(ctx: CanvasRenderingContext2D, v: VehicleDef, cells: Cell[]
       }
     }
     // Body.
-    ctx.fillStyle = K.gold;
+    ctx.fillStyle = v.kind === "trotro" ? paint.body : taxi.body;
     roundRect(ctx, bx, by, bw, bh, cell * 0.18);
     ctx.fill();
     if (v.kind === "trotro") {
       // A kente band along the side.
-      const band = [K.green, K.red, K.green];
-      band.forEach((color, i) => {
+      paint.band.forEach((color, i) => {
         ctx.fillStyle = color;
         if (v.axis === "row") ctx.fillRect(bx, by + bh * (0.62 + i * 0.08), bw, bh * 0.08);
         else ctx.fillRect(bx + bw * (0.62 + i * 0.08), by, bw * 0.08, bh);
       });
-    } else {
-      // Red corners, as on Ghana's taxis.
-      ctx.fillStyle = K.red;
-      const c = cell * 0.22;
-      ctx.fillRect(bx, by, c, c);
-      ctx.fillRect(bx + bw - c, by, c, c);
-      ctx.fillRect(bx, by + bh - c, c, c);
-      ctx.fillRect(bx + bw - c, by + bh - c, c, c);
     }
+    // A red light at each corner.
+    ctx.fillStyle = K.red;
+    const c = cell * 0.22;
+    ctx.fillRect(bx, by, c, c);
+    ctx.fillRect(bx + bw - c, by, c, c);
+    ctx.fillRect(bx, by + bh - c, c, c);
+    ctx.fillRect(bx + bw - c, by + bh - c, c, c);
     // A windscreen on the front piece.
     if (r === 0) {
-      ctx.fillStyle = "rgba(20,16,16,0.75)";
+      ctx.fillStyle = v.kind === "trotro" ? "rgba(20,16,16,0.75)" : taxi.glass;
       const g = cell * 0.22;
       if (forward === "right") ctx.fillRect(bx + bw - g * 1.6, by + bh * 0.18, g, bh * 0.64);
       if (forward === "left") ctx.fillRect(bx + g * 0.6, by + bh * 0.18, g, bh * 0.64);
       if (forward === "down") ctx.fillRect(bx + bw * 0.18, by + bh - g * 1.6, bw * 0.64, g);
       if (forward === "up") ctx.fillRect(bx + bw * 0.18, by + g * 0.6, bw * 0.64, g);
     }
-    ctx.strokeStyle = K.black;
+    ctx.strokeStyle = v.kind === "trotro" ? K.black : taxi.outline;
     ctx.lineWidth = Math.max(1, cell * 0.07);
     roundRect(ctx, bx, by, bw, bh, cell * 0.18);
     ctx.stroke();
@@ -671,14 +735,18 @@ function drawCrash(ctx: CanvasRenderingContext2D, at: Cell, layout: Layout) {
   ctx.stroke();
 }
 
-/** A lab bench seen from above: a pale worktop with a flask or test tubes in kente colors. */
-function drawBench(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, _backRow: boolean, cx = 0, cy = 0) {
+/**
+ * A lab bench seen from above: a pale worktop with a flask or test tubes in kente colors on each
+ * cell. Benches come in several sizes, and a bench several cells big is drawn as one worktop.
+ */
+function drawBench(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, _backRow: boolean, cx = 0, cy = 0, obstacles?: Set<string>) {
   const pad = s * 0.04;
+  const box = pieceBox(x, y, s, cx, cy, obstacles, pad);
   ctx.fillStyle = "#C9C2B4";
-  ctx.fillRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+  ctx.fillRect(box.l, box.t, box.r - box.l, box.b - box.t);
   ctx.strokeStyle = K.black;
   ctx.lineWidth = Math.max(1, s * 0.06);
-  ctx.strokeRect(x + pad, y + pad, s - pad * 2, s - pad * 2);
+  outerEdges(ctx, box);
   const h = cellHash(cx, cy);
   const colors = [K.green, K.red, K.gold];
   if (h % 2 === 0) {
@@ -795,35 +863,79 @@ function drawCurrent(ctx: CanvasRenderingContext2D, x: number, y: number, s: num
   ctx.lineCap = "butt";
 }
 
+/** Canoe paint jobs: the hull color and the stripe along its side. Each canoe on the board gets its own. */
+export const CANOE_PAINT: { hull: string; band: string }[] = [
+  { hull: "#8A5A32", band: K.gold },
+  { hull: "#2F6FA8", band: K.gold },
+  { hull: "#C8372D", band: K.gold },
+  { hull: "#2E8B57", band: K.red },
+  { hull: "#E9DFC8", band: K.red },
+];
+
 /**
- * A fishing canoe seen from above, pointed at both ends, painted in kente bands. A canoe three
+ * Which paint a canoe gets: its place among all the canoes on the board, counted from the top left.
+ * A canoe is a run of cells in one row, and it starts at the cell with nothing on its left.
+ */
+export function canoeIndex(cx: number, cy: number, obstacles?: Set<string>) {
+  if (!obstacles) return 0;
+  let start = cx;
+  while (obstacles.has(`${start - 1},${cy}`)) start--;
+  const starts = [...obstacles]
+    .map((k) => k.split(",").map(Number))
+    .filter(([x, y]) => !obstacles.has(`${x - 1},${y}`))
+    .sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  return Math.max(0, starts.findIndex(([x, y]) => x === start && y === cy));
+}
+
+/**
+ * A fishing canoe seen from above, pointed at both ends, with a painted stripe. A canoe three
  * cells long is drawn as one boat: the end pieces are the bow and stern, the middle is the hull.
+ * Every canoe on the board has a different hull color, like the painted canoes on Ghana's beaches.
  */
 function drawCanoe(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, _backRow: boolean, cx = 0, cy = 0, obstacles?: Set<string>) {
   const left = obstacles?.has(`${cx - 1},${cy}`) ?? false;
   const right = obstacles?.has(`${cx + 1},${cy}`) ?? false;
+  const paint = CANOE_PAINT[canoeIndex(cx, cy, obstacles) % CANOE_PAINT.length];
   const top = y + s * 0.22;
   const bottom = y + s * 0.78;
-  ctx.fillStyle = "#7A4E2D";
+  ctx.fillStyle = paint.hull;
   ctx.strokeStyle = K.black;
   ctx.lineWidth = Math.max(1, s * 0.06);
+  const mid = y + s * 0.5;
+  // The hull: a pointed end where the canoe stops, and a straight cut where it goes on into the next cell.
   ctx.beginPath();
-  ctx.moveTo(left ? x : x + s * 0.05, left ? top : y + s * 0.5);
+  ctx.moveTo(left ? x : x + s * 0.05, left ? top : mid);
   if (!left) ctx.quadraticCurveTo(x + s * 0.2, top, x + s * 0.5, top);
   ctx.lineTo(right ? x + s : x + s * 0.5, top);
-  if (!right) ctx.quadraticCurveTo(x + s * 0.8, top, x + s * 0.95, y + s * 0.5);
-  if (!right) ctx.quadraticCurveTo(x + s * 0.8, bottom, x + s * 0.5, bottom);
+  if (right) ctx.lineTo(x + s, bottom);
+  else {
+    ctx.quadraticCurveTo(x + s * 0.8, top, x + s * 0.95, mid);
+    ctx.quadraticCurveTo(x + s * 0.8, bottom, x + s * 0.5, bottom);
+  }
   ctx.lineTo(left ? x : x + s * 0.5, bottom);
-  if (!left) ctx.quadraticCurveTo(x + s * 0.2, bottom, x + s * 0.05, y + s * 0.5);
+  if (!left) ctx.quadraticCurveTo(x + s * 0.2, bottom, x + s * 0.05, mid);
   ctx.closePath();
   ctx.fill();
+  // The outline skips the straight cuts, so a canoe three cells long reads as one boat.
+  ctx.beginPath();
+  ctx.moveTo(left ? x : x + s * 0.5, top);
+  ctx.lineTo(right ? x + s : x + s * 0.5, top);
+  ctx.moveTo(left ? x : x + s * 0.5, bottom);
+  ctx.lineTo(right ? x + s : x + s * 0.5, bottom);
+  if (!left) {
+    ctx.moveTo(x + s * 0.5, top);
+    ctx.quadraticCurveTo(x + s * 0.2, top, x + s * 0.05, mid);
+    ctx.quadraticCurveTo(x + s * 0.2, bottom, x + s * 0.5, bottom);
+  }
+  if (!right) {
+    ctx.moveTo(x + s * 0.5, top);
+    ctx.quadraticCurveTo(x + s * 0.8, top, x + s * 0.95, mid);
+    ctx.quadraticCurveTo(x + s * 0.8, bottom, x + s * 0.5, bottom);
+  }
   ctx.stroke();
-  // Painted bands along the side.
-  const bands = [K.gold, K.red, K.green];
-  bands.forEach((color, i) => {
-    ctx.fillStyle = color;
-    ctx.fillRect(x + (left ? 0 : s * 0.3), y + s * (0.32 + i * 0.12), s - (left ? 0 : s * 0.3) - (right ? 0 : s * 0.3), s * 0.1);
-  });
+  // One painted stripe along the side, so most of the hull shows its color.
+  ctx.fillStyle = paint.band;
+  ctx.fillRect(x + (left ? 0 : s * 0.3), y + s * 0.44, s - (left ? 0 : s * 0.3) - (right ? 0 : s * 0.3), s * 0.12);
 }
 
 /**

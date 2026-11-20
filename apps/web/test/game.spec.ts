@@ -465,7 +465,7 @@ test.describe("new layouts", () => {
     await page.getByRole("button", { name: "Choose a level" }).click();
     await page.locator("[data-level='2']").click();
     const fixed = await runMap(page);
-    expect(fixed![2]).toBe("..##.....##.....##..");
+    expect(fixed![2]).toBe("..###....##....####.");
   });
 
   test("a set seed gives the same layout every time", async ({ page }) => {

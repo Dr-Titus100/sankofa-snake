@@ -575,6 +575,7 @@ export class SankofaSnake {
     this.levelIndex = i;
     this.stopLoop();
     this.state = createGame(level, seed);
+    this.sound.world = level.world;
     this.part("game").className = `ss-screen ss-game ss-world-${level.world}`;
     this.show("game");
     this.say(TEXT.say.runStart(this.runTitle(), level.challenge, TEXT.run.start[this.input]));
