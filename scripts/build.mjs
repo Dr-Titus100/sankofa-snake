@@ -8,8 +8,11 @@ import { build, context } from "esbuild";
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("..", import.meta.url).pathname;
+// fileURLToPath turns the URL into a real path, so the build also works on Windows
+// and in folders with spaces in their names.
+const root = fileURLToPath(new URL("..", import.meta.url));
 const dist = `${root}dist`;
 const serve = process.argv.includes("--serve");
 

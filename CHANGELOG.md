@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- TRADEMARKS.md keeps the name "Sankofa Snake", the bird logo and the store art for the official game. The code stays under the MIT license.
+- ART.md records how every drawing and sound was made.
+- The build works on Windows and in folders with spaces in their names.
+- The release workflow builds with read-only access in one job and publishes in another.
+- Dependabot and CodeQL watch the packages, the code and the workflows. `.npmrc` is gone, since installs work without `legacy-peer-deps`.
+
 ## 0.6.2 (2026-11-19)
 
 - Copies of the game on one page, or in two browser tabs, now load each other's saved progress and switches. Before, turning Sound off on one copy could write over scores or cleared levels saved by another.
