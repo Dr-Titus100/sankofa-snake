@@ -18,7 +18,7 @@ The same seed always gives the same numbers in the same order. That sounds like 
 
 ## The generator in the game
 
-`packages/core/src/rng.ts` holds a small generator called mulberry32. Students don't need to follow the bit operations inside it. What matters is its shape:
+`packages/core/src/rng.ts` holds a small generator called mulberry32. Students don't need to follow the bit operations inside it. They only need its shape:
 
 ```ts
 nextRandom(state) // returns [value, newState]
@@ -72,7 +72,7 @@ return { ...state, food: open[Math.floor(r * open.length)], rng };
 ## Notes for the teacher
 
 1. Positions 0, 150 and 299. It can never give 300, because `r` is always less than 1, so the last position is 299, the last cell in the list.
-2. `Math.random()` can't be seeded, so the tests couldn't predict the cowries and every player would get a different daily board.
+2. You can't give `Math.random()` a seed, so the tests couldn't predict the cowries and every player would get a different daily board.
 3. They get the same challenge only when their dates match. The date comes from each player's own clock, so for a few hours each day Accra is already on the next date while Boise is not. Each date's challenge is the same for everyone who plays it.
 
 For exercise 3, students with some statistics can go further with a chi-square test on the ten counts. With nine degrees of freedom, a value above about 16.9 would be surprising at the 5% level. A good generator should pass most of the time, and fail about one time in twenty.

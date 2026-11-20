@@ -64,7 +64,7 @@ export const TEXT = {
     progress: "Your progress",
     progressNote: "Scores, stars, cleared levels, the daily streak and free play bests stay on this device.",
     confirm:
-      "This deletes your scores, stars, cleared levels, daily streak and free play bests on this device. Your sound and vibration switches stay as they are. It can't be undone.",
+      "This deletes your scores, stars, cleared levels, daily streak and free play bests on this device. Your sound and vibration switches stay as they are. You can't undo this.",
     resetDone: "Progress deleted.",
   },
 

@@ -1,11 +1,11 @@
 # Sankofa Snake in Python and R
 
-Two more versions of the game, built on the same rules and the same level files as the web game:
+There are two more versions of the game. They use the same rules and the same level files as the web game.
 
 - [`pygame/`](pygame/README.md) runs in a window on Windows, macOS and Linux with Python and Pygame.
 - [`shiny/`](shiny/README.md) runs in a browser from R with Shiny.
 
-Both play exactly like the web game at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/games/sankofa-snake/): the nine levels, the daily challenge, free play and practice, new layouts every run with safe road crossings, power-ups, currents, trotros and taxis in shuffled colors, stars, streaks, the gold Sound switch, Reset progress and a sound for every event in each world's own instrument.
+Both play exactly like the web game at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/games/sankofa-snake/). They have the nine levels, the daily challenge, free play and practice, new layouts every run with safe road crossings, power-ups, currents, trotros and taxis in shuffled colors, stars, streaks, the gold Sound switch, Reset progress and a sound for every event in each world's own instrument.
 
 ## How they stay the same as the web game
 

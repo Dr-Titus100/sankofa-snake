@@ -1,6 +1,6 @@
 # Sankofa Snake for R Shiny
 
-The full game in a browser, run from R with Shiny. It plays exactly like the web game. See [the ports README](../README.md) for how the rules are kept the same.
+This is the full game in a browser, run from R with Shiny. It plays exactly like the web game. [The ports README](../README.md) explains how the ports keep the rules the same.
 
 ## Play
 
@@ -17,7 +17,7 @@ Then open the address Shiny prints. The controls are the same as on the website:
 
 R runs the game. The rules in `R/`, the layouts, the timing of every move, the screens, the scores and the daily streak all live on the R side. The browser only draws what R sends and sends back key presses, taps and swipes.
 
-The drawing and the sounds come from the web game itself. `www/sankofa-board.js` is the board drawing, the sounds, the swipe handling and the logo from `apps/web/src`, and `www/sankofa-snake.css` is its stylesheet, both copied by `node ports/build-assets.mjs`. So the board, the per-world instruments, the shuffled trotro and taxi colors and the gold Sound switch match the website exactly. `www/app.js` connects them to R.
+The drawing and the sounds come from the web game itself. `www/sankofa-board.js` is the board drawing, the sounds, the swipe handling and the logo from `apps/web/src`, and `www/sankofa-snake.css` is its stylesheet. `node ports/build-assets.mjs` copies both, so the board, the per-world instruments, the shuffled trotro and taxi colors and the gold Sound switch match the website exactly. `www/app.js` connects them to R.
 
 Progress stays in the player's browser, in the same format the web game uses, and never on the server. R checks every saved value before it uses it.
 
