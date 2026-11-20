@@ -207,6 +207,27 @@ test("back() pauses a run, then goes back one screen at a time, and says no on t
   expect(await back()).toBe(false);
 });
 
+test("leaving How to play with the reset question open cancels it, so back() still pauses a run", async ({ page }) => {
+  await plainPage(page);
+  const back = () => page.evaluate(() => (document.getElementById("game") as unknown as { sankofaSnake: GameWindow["game"] }).sankofaSnake.back());
+  await page.getByRole("button", { name: "How to play" }).click();
+  await page.getByRole("button", { name: "Reset progress" }).click();
+  // back() answers the open question first.
+  expect(await back()).toBe(true);
+  await expect(page.getByRole("button", { name: "Delete my progress" })).toBeHidden();
+  await page.getByRole("button", { name: "Reset progress" }).click();
+  await page.getByRole("button", { name: "Back" }).click();
+  expect(await back()).toBe(false);
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await page.keyboard.press("ArrowUp");
+  expect(await back()).toBe(true);
+  await expect(page.locator("[data-overlay]").getByText("Paused", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).first().click();
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("button", { name: "How to play" }).click();
+  await expect(page.getByRole("button", { name: "Reset progress" })).toBeVisible();
+});
+
 test("destroy() removes the game cleanly, and a new one can start in its place", async ({ page }) => {
   const errors = watchErrors(page);
   await page.route(/\/module\.html/, (route) =>
