@@ -52,8 +52,11 @@ type Mode = "levels" | "daily" | "free" | "practice";
 
 const starText = (n: number) => "★".repeat(n) + "☆".repeat(3 - n);
 
-/** On a phone turned sideways, the board sits beside the score and buttons instead of above them. */
-const SIDEWAYS = "(orientation: landscape) and (max-height: 500px)";
+/**
+ * On a phone or tablet turned sideways, or any short wide screen, the board sits beside the score,
+ * the buttons and the arrow pad instead of above them. This matches the media query in styles.css.
+ */
+const SIDEWAYS = "(orientation: landscape) and (max-height: 500px), (orientation: landscape) and (pointer: coarse)";
 
 let copies = 0;
 

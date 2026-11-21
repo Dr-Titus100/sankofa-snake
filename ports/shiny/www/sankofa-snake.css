@@ -414,9 +414,9 @@
   display: none;
 }
 
-/* A phone turned sideways: the board on the left, the score, buttons and hint on the right, so
-   Pause, Sound and Back stay on the screen. */
-@media (orientation: landscape) and (max-height: 500px) {
+/* A phone or tablet turned sideways, or any short wide screen: the board on the left, the score,
+   buttons and hint on the right, so Pause, Sound, Back and the arrow pad stay on the screen. */
+@media (orientation: landscape) and (max-height: 500px), (orientation: landscape) and (pointer: coarse) {
   .ss-root {
     max-width: 960px;
     padding: 10px 14px;
@@ -525,7 +525,7 @@
   scroll-margin-top: var(--ss-scroll-margin, 12px);
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
+@media (orientation: landscape) and (max-height: 500px), (orientation: landscape) and (pointer: coarse) {
   /* The side column is wider on touch screens, so the buttons and the arrow pad fit side by side. */
   .ss-root.ss-touch .ss-game:not([hidden]) {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 40%);
@@ -540,7 +540,12 @@
     margin-top: 0;
   }
   .ss-pad {
-    --ss-pad-size: 44px;
     margin-top: 0;
+  }
+}
+/* A phone turned sideways has little height, so the arrows are a little smaller. A tablet keeps the full size. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .ss-pad {
+    --ss-pad-size: 44px;
   }
 }

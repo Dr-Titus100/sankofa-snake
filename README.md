@@ -118,7 +118,7 @@ Every push and pull request runs the checks in GitHub Actions, and the badge at 
 | --- | --- | --- |
 | `npm run typecheck` | Types across the rules, the web game and the tests | The whole project |
 | `npm test` | Unit tests for the rules, the layouts, the levels, saved progress, the sounds and the paint on vehicles and canoes | 94 tests |
-| `npm run test:e2e` | The built game played in a desktop browser, an Android phone and an iPhone (WebKit) | 49 tests on each, skipping the few that apply to another kind of device |
+| `npm run test:e2e` | The built game played in a desktop browser, an Android phone and an iPhone (WebKit) | 50 tests on each, skipping the few that apply to another kind of device |
 | Pygame tests | The Python rules replaying every recorded run, and the Pygame screens, controls, saving and sounds | 21 tests |
 | Shiny tests | The R rules replaying every recorded run, and the Shiny server's screens, controls and saving | 932 checks |
 
