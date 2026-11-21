@@ -44,7 +44,7 @@ def move_ms(state: GameState) -> float:
     return 1000 / speed_now(state)
 ```
 
-`speed_now` is the snake's speed in moves a second. In slow motion it is 60% of the speed, rounded, and never below 3. While the snake swims along a current, the way the current flows, it is 1.5 times that, rounded.
+`speed_now` is the snake's speed in moves a second. In slow motion it is 60% of the speed, rounded, and never below 3. While the snake swims along a current, the way the current flows, it is 1.5 times that, rounded. While it swims against a current, it is half that, rounded.
 
 ## Moving the snake
 

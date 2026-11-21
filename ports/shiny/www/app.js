@@ -6,7 +6,7 @@
   const B = window.SankofaBoard;
   const KEY = "sankofa-snake/v1";
   const KEYS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right", W: "up", S: "down", A: "left", D: "right" };
-  const SIDEWAYS = "(orientation: landscape) and (max-height: 500px)";
+  const SIDEWAYS = "(orientation: landscape) and (max-height: 500px), (orientation: landscape) and (pointer: coarse)";
   const touch = B.inputKind() === "touch";
   const reduceMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
   const sound = new B.Sound(true, true);

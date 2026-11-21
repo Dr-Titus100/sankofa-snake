@@ -19,7 +19,7 @@ Play it at [titusnyarkonde.com/games/sankofa-snake](https://titusnyarkonde.com/g
 | 5 | Road | Trotros and taxis drive across the board, and on some runs the roads cross. Vehicles stop for the snake and for each other, so only the snake's head can hit one. |
 | 6 | Lab | Power-ups appear for a short time. Slow motion slows the snake down, shrink makes it shorter, and a pass lets it through its own tail once. |
 | 7 | Maze | Narrow corridors with little room to turn, and a new maze every run. |
-| 8 | Ocean | Currents push the snake one square sideways when it swims across them, and speed it up when it swims along them. |
+| 8 | Ocean | Currents push the snake one square sideways when it swims across them. Swimming along them speeds the snake up, and swimming against them slows it to half speed. |
 | 9 | Weaving village | Every challenge at once: walls, looms, trotros, currents and power-ups, at top speed. |
 
 Every run places the stalls, buildings, roads, lab benches, currents, canoes and looms somewhere new, and the Maze is a new maze each time. The snake's starting cells and the cells just ahead of it stay clear, and the snake can reach every open cell.
@@ -117,8 +117,8 @@ Every push and pull request runs the checks in GitHub Actions, and the badge at 
 | Check | What it covers | Count |
 | --- | --- | --- |
 | `npm run typecheck` | Types across the rules, the web game and the tests | The whole project |
-| `npm test` | Unit tests for the rules, the layouts, the levels, saved progress, the sounds and the paint on vehicles and canoes | 94 tests |
-| `npm run test:e2e` | The built game played in a desktop browser, an Android phone and an iPhone (WebKit) | 49 tests on each, skipping the few that apply to another kind of device |
+| `npm test` | Unit tests for the rules, the layouts, the levels, saved progress, the sounds and the paint on vehicles and canoes | 96 tests |
+| `npm run test:e2e` | The built game played in a desktop browser, an Android phone and an iPhone (WebKit) | 50 tests on each, skipping the few that apply to another kind of device |
 | Pygame tests | The Python rules replaying every recorded run, and the Pygame screens, controls, saving and sounds | 21 tests |
 | Shiny tests | The R rules replaying every recorded run, and the Shiny server's screens, controls and saving | 932 checks |
 

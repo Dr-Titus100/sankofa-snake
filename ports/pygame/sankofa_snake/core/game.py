@@ -27,6 +27,8 @@ SLOW_SHARE = 0.6
 MIN_SPEED = 3
 # Swimming along a current, the way the snake is heading, the snake moves this much faster.
 CURRENT_BOOST = 1.5
+# Swimming against a current, the opposite way to the snake's heading, the snake moves at this share of its speed.
+CURRENT_DRAG = 0.5
 #: How many cells the shrink power-up takes off the tail.
 SHRINK_CELLS = 4
 MIN_LENGTH = 3
@@ -144,9 +146,18 @@ def riding_current(state: GameState) -> bool:
     return bool(state.snake) and state.currents.get(state.snake[0]) == state.dir
 
 
+def against_current(state: GameState) -> bool:
+    """Whether the head is on a current that flows the opposite way to the snake's heading."""
+    return bool(state.snake) and state.currents.get(state.snake[0]) == OPPOSITE[state.dir]
+
+
 def speed_now(state: GameState) -> float:
     speed = max(MIN_SPEED, js_round(state.speed * SLOW_SHARE)) if is_slow(state) else state.speed
-    return js_round(speed * CURRENT_BOOST) if riding_current(state) else speed
+    if riding_current(state):
+        return js_round(speed * CURRENT_BOOST)
+    if against_current(state):
+        return max(1, js_round(speed * CURRENT_DRAG))
+    return speed
 
 
 def move_ms(state: GameState) -> float:

@@ -607,6 +607,22 @@ test.describe("on a phone", () => {
     expect(board.y + board.height).toBeLessThanOrEqual(360);
     expect(board.height).toBeGreaterThanOrEqual(200);
   });
+
+  test("on a tablet turned sideways, the arrows sit beside the board", async ({ page }) => {
+    await page.setViewportSize({ width: 1080, height: 810 });
+    await page.goto("/?seed=1&layout=fixed");
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    const board = (await page.locator("canvas").boundingBox())!;
+    expect(board.y + board.height).toBeLessThanOrEqual(810);
+    for (const name of ["Up", "Down", "Left", "Right"]) {
+      const box = (await page.getByRole("group", { name: "Steering" }).getByRole("button", { name }).boundingBox())!;
+      expect(box.x, name).toBeGreaterThanOrEqual(board.x + board.width);
+      expect(box.x + box.width, name).toBeLessThanOrEqual(1080);
+      expect(box.y + box.height, name).toBeLessThanOrEqual(810);
+      // A tablet keeps the full-size arrows.
+      expect(box.width, name).toBeGreaterThanOrEqual(52);
+    }
+  });
 });
 
 /** A finger swipe on the page, sent as pointer events the way a touch screen sends them. */
