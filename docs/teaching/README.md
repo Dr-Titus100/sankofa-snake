@@ -2,7 +2,7 @@
 
 These guides use the game's own code to teach programming. Each lesson starts from something students can see while they play, such as the snake wrapping around the edge or the cowries landing in the same places every time, and then opens the file where that happens.
 
-The lessons suit students who have written a little code before, in any language. They work for an upper secondary class, a first university course or a coding club. The code is TypeScript, but the ideas carry over to Python and R.
+The lessons suit students who have written a little code before, in any language. They work for an upper secondary class, a first university course or a coding club. The code here is TypeScript. The same six lessons also come in [Python, with the Pygame version](python/README.md), and in [R, with the R Shiny version](r/README.md). Each of those uses the port's own code and tests, and points out where the language behaves differently from JavaScript.
 
 ## The lessons
 

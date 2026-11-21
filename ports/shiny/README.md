@@ -31,3 +31,7 @@ Rscript -e 'testthat::test_dir("tests/testthat")'
 ```
 
 `test-reference.R` replays every recorded run from the TypeScript rules. `test-server.R` runs the Shiny server without a browser and checks Play, the controls, crashes, practice, the daily challenge, Reset progress and saved progress.
+
+## Teaching
+
+The [R teaching guides](../../docs/teaching/r/README.md) use this version's code to teach programming in six lessons, with questions on paper, `testthat` exercises and notes for the teacher.

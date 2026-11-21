@@ -41,3 +41,7 @@ SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python -m unittest discover -s tests
 ```
 
 `test_reference.py` replays every recorded run from the TypeScript rules. `test_app.py` opens the game without a screen and checks the menus, the keys, the arrow pad, swipes, pausing, saving and the sounds.
+
+## Teaching
+
+The [Python teaching guides](../../docs/teaching/python/README.md) use this version's code to teach programming in six lessons, with questions on paper, `unittest` exercises and notes for the teacher.
