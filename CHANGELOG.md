@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.2 (2026-11-21)
 
 - In the Ocean and the Weaving village, swimming against a current, the opposite way to its arrows, now slows the snake to half its speed until its head leaves the current. Before, swimming against a current made no difference. How to play says so too.
 - On a tablet turned sideways, such as an iPad, the arrow pad, Pause, Sound and Back now sit beside the board, the way they do on a phone turned sideways. Before, they stayed under the board.
