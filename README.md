@@ -49,7 +49,7 @@ Each event has a short sound: a cowrie, a power-up, a current, a crash and a cle
 
 ## Teaching
 
-The [teaching guides](docs/teaching/README.md) use the game's code to teach programming, with questions on paper, exercises at the keyboard and notes for the teacher. There are six lessons: the grid and how the snake moves, rules as functions, levels as data, randomness and seeds, the game loop and timing, and collision checks.
+The [teaching guides](docs/teaching/README.md) use the game's code to teach programming, with questions on paper, exercises at the keyboard and notes for the teacher. There are six lessons: the grid and how the snake moves, rules as functions, levels as data, randomness and seeds, the game loop and timing, and collision checks. They come in three languages: [TypeScript](docs/teaching/README.md) with the web game, [Python](docs/teaching/python/README.md) with the Pygame version, and [R](docs/teaching/r/README.md) with the R Shiny version.
 
 ## Where the code lives
 

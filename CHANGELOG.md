@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The teaching guides now come in Python and R as well. `docs/teaching/python` teaches the same six lessons with the Pygame version's code and `unittest`, and `docs/teaching/r` teaches them with the R Shiny version's code and `testthat`. Each lesson points out where the language behaves differently from JavaScript, such as `%` on negative numbers, rounding halves and 32-bit arithmetic.
+- The Pygame version has an `environment.yml` next to `requirements.txt`, so you can install it with conda as well as pip. The Pygame and R Shiny READMEs now start with cloning the repository and say which folder each command runs from.
+
 ## 0.10.1 (2026-11-20)
 
 - The Sankofa Snake License now covers every version, including those released before 0.10.0, when you get it from this repo or its releases from 20 November 2026 on. Copies given out under the MIT license before that date, and copies passed on from them, keep the MIT rights.

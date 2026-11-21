@@ -4,7 +4,13 @@ This is the full game in a browser, run from R with Shiny. It plays exactly like
 
 ## Play
 
-You need R 4.1 or newer with the shiny and jsonlite packages.
+You need R 4.1 or newer with the shiny and jsonlite packages, and a copy of the repository.
+
+```sh
+git clone https://github.com/Dr-Titus100/sankofa-snake.git
+```
+
+R's working directory has to be the `sankofa-snake` folder that the clone made. In RStudio, choose File, New Project, Existing Directory and pick that folder. In any other R session, run `setwd()` with the folder's path. `getwd()` shows which folder R is in. Then run:
 
 ```r
 install.packages(c("shiny", "jsonlite"))
@@ -31,3 +37,7 @@ Rscript -e 'testthat::test_dir("tests/testthat")'
 ```
 
 `test-reference.R` replays every recorded run from the TypeScript rules. `test-server.R` runs the Shiny server without a browser and checks Play, the controls, crashes, practice, the daily challenge, Reset progress and saved progress.
+
+## Teaching
+
+The [R teaching guides](../../docs/teaching/r/README.md) use this version's code to teach programming in six lessons, with questions on paper, `testthat` exercises and notes for the teacher.
