@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- In the Ocean and the Weaving village, swimming against a current, the opposite way to its arrows, now slows the snake to half its speed until its head leaves the current. Before, swimming against a current made no difference. How to play says so too.
 - On a tablet turned sideways, such as an iPad, the arrow pad, Pause, Sound and Back now sit beside the board, the way they do on a phone turned sideways. Before, they stayed under the board.
 - The teaching guides now come in Python and R as well. `docs/teaching/python` teaches the same six lessons with the Pygame version's code and `unittest`, and `docs/teaching/r` teaches them with the R Shiny version's code and `testthat`. Each lesson points out where the language behaves differently from JavaScript, such as `%` on negative numbers, rounding halves and 32-bit arithmetic.
 - The Pygame version has an `environment.yml` next to `requirements.txt`, so you can install it with conda as well as pip. The Pygame and R Shiny READMEs now start with cloning the repository and say which folder each command runs from.

@@ -15,6 +15,8 @@ SLOW_SHARE <- 0.6
 MIN_SPEED <- 3
 # Swimming along a current, the way the snake is heading, the snake moves this much faster.
 CURRENT_BOOST <- 1.5
+# Swimming against a current, the opposite way to the snake's heading, the snake moves at this share of its speed.
+CURRENT_DRAG <- 0.5
 SHRINK_CELLS <- 4
 MIN_LENGTH <- 3
 
@@ -93,9 +95,18 @@ riding_current <- function(state) {
   k %in% names(state$currents) && isTRUE(unname(state$currents[[k]]) == state$dir)
 }
 
+# Whether the head is on a current that flows the opposite way to the snake's heading.
+against_current <- function(state) {
+  if (!length(state$sx)) return(FALSE)
+  k <- key(state$sx[1], state$sy[1])
+  k %in% names(state$currents) && isTRUE(unname(state$currents[[k]]) == OPPOSITE[[state$dir]])
+}
+
 speed_now <- function(state) {
   speed <- if (is_slow(state)) max(MIN_SPEED, js_round(state$speed * SLOW_SHARE)) else state$speed
-  if (riding_current(state)) js_round(speed * CURRENT_BOOST) else speed
+  if (riding_current(state)) return(js_round(speed * CURRENT_BOOST))
+  if (against_current(state)) return(max(1, js_round(speed * CURRENT_DRAG)))
+  speed
 }
 
 move_ms <- function(state) 1000 / speed_now(state)

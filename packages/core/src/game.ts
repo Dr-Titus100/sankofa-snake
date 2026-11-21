@@ -26,6 +26,8 @@ const SLOW_SHARE = 0.6;
 const MIN_SPEED = 3;
 /** Swimming along a current, with the current flowing the way the snake is heading, the snake moves this much faster. */
 export const CURRENT_BOOST = 1.5;
+/** Swimming against a current, with the current flowing the opposite way, the snake moves at this share of its speed. */
+export const CURRENT_DRAG = 0.5;
 /** How many cells the shrink power-up takes off the tail. */
 export const SHRINK_CELLS = 4;
 /** Shrinking never makes the snake shorter than this. */
@@ -105,10 +107,21 @@ export function ridingCurrent(state: GameState): boolean {
   return head !== undefined && state.currents.get(key(head)) === state.dir;
 }
 
-/** Moves per second right now, counting slow motion and a current the snake is swimming along. */
+/**
+ * Whether the snake is swimming against a current: its head is on a current that flows the
+ * opposite way to the snake's heading. It goes back to its own speed as soon as its head leaves the current.
+ */
+export function againstCurrent(state: GameState): boolean {
+  const head = state.snake[0];
+  return head !== undefined && state.currents.get(key(head)) === OPPOSITE[state.dir];
+}
+
+/** Moves per second right now, counting slow motion and a current the snake is swimming along or against. */
 export function speedNow(state: GameState): number {
   const speed = isSlow(state) ? Math.max(MIN_SPEED, Math.round(state.speed * SLOW_SHARE)) : state.speed;
-  return ridingCurrent(state) ? Math.round(speed * CURRENT_BOOST) : speed;
+  if (ridingCurrent(state)) return Math.round(speed * CURRENT_BOOST);
+  if (againstCurrent(state)) return Math.max(1, Math.round(speed * CURRENT_DRAG));
+  return speed;
 }
 
 /** How long one move takes right now, in milliseconds. */

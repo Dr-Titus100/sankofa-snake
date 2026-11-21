@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   LEVELS,
   CURRENT_BOOST,
+  CURRENT_DRAG,
+  againstCurrent,
   createGame,
   ridingCurrent,
   SHRINK_CELLS,
@@ -400,14 +402,42 @@ describe("currents", () => {
     g = tick(g).state;
     expect(g.snake[0]).toEqual({ x: 3, y: 3 });
     expect(g.elapsedMs - start).toBeCloseTo(1000 / 9);
-    // Swimming against the current doesn't speed the snake up.
+    // Swimming against the current slows the snake down instead.
     expect(ridingCurrent({ ...g, dir: "left" })).toBe(false);
-    expect(speedNow({ ...g, dir: "left" })).toBe(6);
+    expect(speedNow({ ...g, dir: "left" })).toBe(3);
     // Once the head leaves the current, the snake is back at its own speed.
     g = tick(turn(g, "down")).state;
     expect(g.snake[0]).toEqual({ x: 3, y: 4 });
     expect(ridingCurrent(g)).toBe(false);
     expect(speedNow(g)).toBe(6);
+  });
+
+  it("moves at half speed against the current and goes back to its own speed when it leaves", () => {
+    const level = testLevel({ map, start: { x: 4, y: 3, dir: "left", length: 1 }, speed: { start: 6, step: 0, every: 5, max: 6 } });
+    let g = withFood(turn(createGame(level, 1), "left"), 0, 9);
+    expect(againstCurrent(g)).toBe(true);
+    expect(ridingCurrent(g)).toBe(false);
+    expect(speedNow(g)).toBe(Math.round(6 * CURRENT_DRAG));
+    expect(moveMs(g)).toBeCloseTo(1000 / 3);
+    const start = g.elapsedMs;
+    g = tick(g).state;
+    expect(g.snake[0]).toEqual({ x: 3, y: 3 });
+    expect(g.elapsedMs - start).toBeCloseTo(1000 / 3);
+    expect(againstCurrent(g)).toBe(true);
+    // Once the head leaves the current, the snake is back at its own speed.
+    g = tick(turn(g, "down")).state;
+    expect(g.snake[0]).toEqual({ x: 3, y: 4 });
+    expect(againstCurrent(g)).toBe(false);
+    expect(speedNow(g)).toBe(6);
+  });
+
+  it("slows slow motion against a current too, rounding the way JavaScript does", () => {
+    const level = testLevel({ map, start: { x: 4, y: 3, dir: "left", length: 1 }, speed: { start: 10, step: 0, every: 5, max: 10 } });
+    const g = { ...turn(createGame(level, 1), "left"), slowUntil: 99 };
+    // Slow motion makes 10 into 6, and half of that is 3.
+    expect(speedNow(g)).toBe(3);
+    // At the lowest slow-motion speed, 3, half is 1.5, which rounds up to 2.
+    expect(speedNow({ ...g, speed: 4 })).toBe(2);
   });
 
   it("doesn't count a snake crossing the current as swimming along it", () => {
