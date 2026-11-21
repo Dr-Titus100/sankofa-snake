@@ -4,11 +4,27 @@ This is the full game in a window, written in Python with Pygame. It plays exact
 
 ## Play
 
-You need Python 3.10 or newer. `requirements.txt` installs pygame-ce, the community edition of Pygame, which has ready-made builds for every recent Python, 3.14 included. The game runs on the original pygame package too.
+You need Python 3.10 or newer and a copy of the repository. Clone it first and go into this folder:
 
 ```sh
-cd ports/pygame
+git clone https://github.com/Dr-Titus100/sankofa-snake.git
+cd sankofa-snake/ports/pygame
+```
+
+Every command below runs from `sankofa-snake/ports/pygame`. The game needs pygame-ce, the community edition of Pygame, which has ready-made builds for every recent Python, 3.14 included. The game runs on the original pygame package too. Install it with pip or with conda.
+
+With pip, `requirements.txt` lists what to install:
+
+```sh
 python -m pip install -r requirements.txt
+python -m sankofa_snake
+```
+
+With conda, `environment.yml` makes an environment called `sankofa-snake` with Python and pygame-ce from conda-forge:
+
+```sh
+conda env create -f environment.yml
+conda activate sankofa-snake
 python -m sankofa_snake
 ```
 
@@ -35,8 +51,9 @@ tests/                    the reference runs and the app's own tests
 
 ## Tests
 
+From the same folder:
+
 ```sh
-cd ports/pygame
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python -m unittest discover -s tests
 ```
 

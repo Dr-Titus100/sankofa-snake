@@ -28,7 +28,7 @@ python -m pip install -r requirements.txt
 python -m sankofa_snake
 ```
 
-The last line opens the game in a window. The rules in `sankofa_snake/core` don't need Pygame, so students can do every exercise even if Pygame won't install.
+The last line opens the game in a window. Students who use conda can make the environment from `environment.yml` instead of running pip, with `conda env create -f environment.yml` and then `conda activate sankofa-snake`. The rules in `sankofa_snake/core` don't need Pygame, so students can do every exercise even if Pygame won't install.
 
 Students write their tests in a new file, `ports/pygame/tests/test_lesson.py`, that starts like this:
 

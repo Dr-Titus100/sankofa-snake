@@ -1,0 +1,7 @@
+# The conda version of requirements.txt. Keep the two lists the same.
+name: sankofa-snake
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - pygame-ce>=2.5
