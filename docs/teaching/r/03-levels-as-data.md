@@ -150,7 +150,7 @@ That last check is `validate_level` in `levels.R`. It returns a character vector
 
 2. Break your level on purpose. Make one row too short, then move the start onto a `#`. Print what `validate_level` returns each time.
 3. Close the gap in your wall with `mine$map[[5]] <- "##########"` (or whichever row holds your wall) and check that `all_open_connected` now returns `FALSE`.
-4. Count the Market's stall cells with code instead of by hand: `length(obstacle_keys(LEVELS[[3]]))`. Then try `table(map_cells(LEVELS[[3]])$ch)`.
+4. Count the Market's stall cells with code, using `length(obstacle_keys(LEVELS[[3]]))`, and check your answer to question 1. Then try `table(map_cells(LEVELS[[3]])$ch)`.
 
 ## Notes for the teacher
 

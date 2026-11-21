@@ -2,7 +2,7 @@
 
 These guides teach programming with the R Shiny version of the game, in `ports/shiny`. They follow the same six lessons as the [TypeScript guides](../README.md), but every code sample comes from the R port, and every exercise runs with `testthat`. Each lesson also points out where R behaves differently from JavaScript, because the port had to deal with each of those differences.
 
-The lessons suit students who have written a little R before, for example in a statistics or data science course. They work for an upper secondary class, a first university course or a coding club. The R port has no frame loop, no objects with methods and no unsigned integers, so it also shows how far plain lists, vectors and functions can go.
+The lessons suit students who have written a little R before, for example in a statistics or data science course. They work for an upper secondary class, a first university course or a coding club. The R port has no frame loop, no objects with methods and no unsigned integers, so the lessons also show a whole game built from plain lists, vectors and functions.
 
 ## The lessons
 
@@ -23,8 +23,9 @@ Students need R 4.1 or newer, the shiny, jsonlite and testthat packages, and a c
 
 ```sh
 git clone https://github.com/Dr-Titus100/sankofa-snake.git
-cd sankofa-snake/ports/shiny
 ```
+
+For these lessons, R's working directory should be the `ports/shiny` folder inside the clone. In RStudio, choose File, New Project, Existing Directory and pick `sankofa-snake/ports/shiny`. In any other R session, run `setwd()` with that folder's path. `getwd()` shows which folder R is in. Then run:
 
 ```r
 install.packages(c("shiny", "jsonlite", "testthat"))

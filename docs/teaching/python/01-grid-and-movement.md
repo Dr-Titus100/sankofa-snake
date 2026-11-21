@@ -47,7 +47,7 @@ body = state.snake[:-1] if tail_moves else state.snake
 snake = (nxt,) + tuple(body)
 ```
 
-`state.snake[:-1]` is a slice. It makes a new tuple with every cell except the last one. `(nxt,)` is a tuple holding only the new head, and `+` joins two tuples into a new one. The comma matters: `(nxt)` without it is just `nxt`.
+`state.snake[:-1]` is a slice. It makes a new tuple with every cell except the last one. `(nxt,)` is a tuple holding only the new head, and `+` joins two tuples into a new one. The comma matters. Without it, `(nxt)` is just `nxt`.
 
 ## Which way is ahead?
 
@@ -77,7 +77,7 @@ def wrap_cell(c: Cell, level: dict) -> Cell:
     return (c[0] % level["width"], c[1] % level["height"])
 ```
 
-This is the first of several places where the port had to think about how Python and JavaScript differ. When you port code from one language to another, the lines that look the same are the ones to check most carefully.
+This is the first of several places where the port had to allow for a difference between Python and JavaScript. Lines that look identical in two languages can still behave differently, so a port needs the most care on exactly those lines.
 
 ## Questions on paper
 

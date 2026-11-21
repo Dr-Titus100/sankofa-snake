@@ -148,7 +148,7 @@ Add these tests to `tests/testthat/test-lesson.R`.
 4. 2 moves. The observer adds at most 250 milliseconds, and a move takes 125, so the jar holds exactly two moves. Without the cap it would hold 8, and the snake would jump 8 cells at once.
 5. 75 milliseconds, `ceiling(125 - 50)`. The `max(5, ...)` only matters when the jar is already almost full.
 
-For keyboard exercise 3, the body of the loop is:
+For console exercise 3, the body of the loop is:
 
 ```r
 carry <- carry + frame_ms

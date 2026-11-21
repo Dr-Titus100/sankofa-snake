@@ -126,8 +126,8 @@ Add these tests to `tests/testthat/test-lesson.R`.
 1. It returns the state you passed in, so nothing changes and the snake keeps going right. Turning left would put the head on the neck.
 2. `crash`. In practice it returns a state with `status = "ready"` and a `bump`, so the game waits for a new direction.
 3. With only the last key, a quick up then right would lose the up, and the snake would turn right without first going up. The queue keeps up to two turns, `MAX_QUEUED_TURNS`, so quick presses happen in order.
-4. `new.env()` makes an environment, and R doesn't copy environments. Every function that gets `game` gets the same environment, so a change made in one function is seen everywhere. That is what the server needs for the one live game. The rules use plain lists so that they never share state by accident.
+4. `new.env()` makes an environment, and R doesn't copy environments. Every function that gets `game` gets the same environment, so every function sees a change that any one of them makes. That is what the server needs for the one live game. The rules use plain lists so that they never share state by accident.
 
-For keyboard exercise 3, ask students why the test passes even though `tick(before)` throws its result away. The answer is that `tick` changes only its own copy. For exercise 4, the City's snake starts at row 10 in an open column. Ten moves reach row 0 and the 11th hits the wall, so it takes 11 ticks.
+For console exercise 3, ask students why the test passes even though `tick(before)` throws its result away. The answer is that `tick` changes only its own copy. For exercise 4, the City's snake starts at row 10 in an open column. Ten moves reach row 0 and the 11th hits the wall, so it takes 11 ticks.
 
 A good extension is to ask students to break a rule on purpose, for example by deleting the line in `turn` that checks for the neck, and watch which tests fail, both theirs and the ones in `test-reference.R`. Then they undo the change.

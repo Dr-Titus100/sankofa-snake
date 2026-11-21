@@ -135,7 +135,7 @@ That last check is `validate_level` in `levels.py`. It returns a list of problem
 
 2. Break your level on purpose. Make one row too short, then move the start onto a `#`. Print what `validate_level` returns each time.
 3. Close the gap in your wall and check that `all_open_connected` now returns `False`. Then count by hand how many cells the flood fill reaches from the start.
-4. Count the Market's stall cells with code instead of by hand: `len(obstacle_keys(LEVELS[2]))`.
+4. Count the Market's stall cells with code, using `len(obstacle_keys(LEVELS[2]))`, and check your answer to question 1.
 
 ## Notes for the teacher
 

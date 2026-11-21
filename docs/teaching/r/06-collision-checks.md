@@ -50,7 +50,7 @@ if (any(bx == nx & by == ny)) {
 
 On most moves the tail leaves its cell at the same moment the head arrives somewhere new. So the game checks the head against the body without its last cell, `state$sx[-n]`. That is why the snake can chase its own tail.
 
-`bx == nx` compares every body cell's `x` with the head's `x` at once, and gives one `TRUE` or `FALSE` for each body cell. `by == ny` does the same for `y`. `&` combines the two vectors item by item, so a `TRUE` means a body cell matches on both. `any` asks whether there is at least one. This is the R way to search, with no loop written out.
+`bx == nx` compares every body cell's `x` with the head's `x` at once, and gives one `TRUE` or `FALSE` for each body cell. `by == ny` does the same for `y`. `&` combines the two vectors item by item, so a `TRUE` means a body cell matches on both. `any` asks whether there is at least one. This is how R code usually searches a vector, with no loop written out.
 
 When the head lands on a cowrie, the tail stays put on that same move, so the snake is one cell longer straight away. The `grow` field can also hold extra cells for the snake to grow, and while it is above 0 the tail stays put on every move. Then the last cell counts, and running into it ends the run.
 
@@ -111,12 +111,12 @@ Add these tests to `tests/testthat/test-lesson.R`.
 
 ## Notes for the teacher
 
-1. No, the run goes on, because the tail leaves its cell on the same move. Eating on the move before changes nothing. The cowrie added its cell on that move, so `grow` is still 0 and the tail moves away as usual. Only with `grow` at 1 does the tail stay, and then the run ends with `crash` set to `"self"`. Keyboard exercise 3 checks this.
+1. No, the run goes on, because the tail leaves its cell on the same move. Eating on the move before changes nothing. The cowrie added its cell on that move, so `grow` is still 0 and the tail moves away as usual. Only with `grow` at 1 does the tail stay, and then the run ends with `crash` set to `"self"`. Console exercise 3 checks this.
 2. After `wrap_xy`, a cell off the right edge becomes a cell on the left edge, which is on the board. The check would never see it as outside.
 3. No. The snake can never move into an obstacle, so the two never share a cell. The order still decides which message a player sees when two kinds of collision could happen, so read it carefully when you add a new kind.
 4. `&&` wants a single `TRUE` or `FALSE` on each side. Given vectors, R 4.3 stops with an error, "'length = 3' in coercion to 'logical(1)'". Older versions of R used only the first item, so the check looked at the head's neck and missed the rest of the body.
 5. Obstacles never move, and the game only ever asks whether one cell is an obstacle. One vector of text keys answers that with a single `%in%`. The snake changes every move, and the game adds and drops cells at its ends, which is simpler with two number vectors.
 
-For keyboard exercise 3, the run ends with `crash` set to `"self"`, because a snake with cells left to grow keeps its tail cell. In exercise 4 the answers are `TRUE TRUE FALSE`, `FALSE TRUE TRUE`, `FALSE TRUE FALSE` and `TRUE`.
+For console exercise 3, the run ends with `crash` set to `"self"`, because a snake with cells left to grow keeps its tail cell. In exercise 4 the answers are `TRUE TRUE FALSE`, `FALSE TRUE TRUE`, `FALSE TRUE FALSE` and `TRUE`.
 
 A good extension is to ask students where they would add a new kind of obstacle, such as a puddle that only slows the snake down, and which checks it would need to come before or after.

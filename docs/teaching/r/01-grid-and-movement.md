@@ -15,7 +15,7 @@ The board is a grid of square cells, 20 across and 20 down in most levels. Every
 
 So the top left cell is `(0, 0)` and the bottom right cell of a 20 by 20 board is `(19, 19)`. In maths class `y` usually grows upward. On screens it grows downward, because screens draw from the top.
 
-The game counts cells from 0, the way the web game does, so that a level file means the same thing in every version. R counts the items in a vector from 1. Keep both in mind: a cell's `x` can be 0, but the first item of a vector is `v[1]`.
+The game counts cells from 0, the way the web game does, so that a level file means the same thing in every version. R counts the items in a vector from 1. Keep both in mind. A cell's `x` can be 0, but the first item of a vector is `v[1]`.
 
 ## The snake is two vectors
 
@@ -84,7 +84,7 @@ Going off the left edge gives `x = -1`. In JavaScript, `-1 % 20` is `-1`, so the
 wrap_xy <- function(x, y, level) c(x %% level$width, y %% level$height)
 ```
 
-This is the first of several places where the port had to think about how R and JavaScript differ. When you port code from one language to another, the lines that look the same are the ones to check most carefully.
+This is the first of several places where the port had to allow for a difference between R and JavaScript. Lines that look identical in two languages can still behave differently, so a port needs the most care on exactly those lines.
 
 ## Questions on paper
 
